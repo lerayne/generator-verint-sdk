@@ -1,0 +1,31 @@
+{
+  "name": "generator-verint-sdk",
+  "version": "0.1.0",
+  "description": "Scaffolding Verint (ex-Telligent) platform customizations, like widgets, themes, automations etc.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lerayne/generator-verint-sdk.git"
+  },
+  "keywords": [
+    "yeoman-generator",
+    "verint",
+    "telligent"
+  ],
+  "author": "Michael Yegorov",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/lerayne/generator-verint-sdk/issues"
+  },
+  "homepage": "https://github.com/lerayne/generator-verint-sdk#readme",
+  "files": [
+    "generators"
+  ],
+  "dependencies": {
+    "sync-exec": "0.6.2",
+    "yeoman-generator": "5.6.1"
+  }
+}
