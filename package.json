@@ -26,6 +26,7 @@
   ],
   "dependencies": {
     "sync-exec": "0.6.2",
+    "xml-js": "1.6.11",
     "yeoman-generator": "5.6.1"
   }
 }
