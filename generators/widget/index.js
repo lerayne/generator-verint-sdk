@@ -1,6 +1,8 @@
 const BaseGenerator = require('../../src/BaseGenerator')
 const fs = require('fs')
 const path = require('path')
+const execa = require('execa')
+
 const { getXMLContents } = require('../../src/importXML')
 const ifCreateDir = require('../../src/ifCreateDir')
 const writeNewXML = require('../../src/writeNewXML')
@@ -23,7 +25,61 @@ module.exports = class VerintWidget extends BaseGenerator {
   }
 
   async prompting () {
+    const pathChunks = this.env.cwd.split('/')
+    const folderName = pathChunks[pathChunks.length - 1]
+
+    const userName = await execa.command('git config --get user.name')
+    const userEmail = await execa.command('git config --get user.email')
+
     this.answers = await this.prompt([
+      {
+        type: 'input',
+        name: 'projectName',
+        message: 'Enter project name',
+        validate: value => {
+          let passed = true
+
+          if (!value) {
+            this.log.error('\nERROR: tile system name is required')
+            passed = false
+          }
+
+          if (value.match(/\s/g)) {
+            this.log.error('\nERROR: tile name should not contain whitespace symbols')
+            passed = false
+          }
+
+          if (value.match(/^\d+$/)) {
+            this.log.error('\nERROR: tile name should contain at least one letter')
+            passed = false
+          }
+
+          return passed
+        },
+        default: folderName
+      },
+      {
+        type: 'input',
+        name: 'userName',
+        message: 'Project author name',
+        default: userName.stdout,
+      },
+      {
+        type: 'input',
+        name: 'userEmail',
+        message: 'Project author email',
+        default: userEmail.stdout,
+        validate: value => {
+          let passed = true
+
+          if (value.match(/\s/g)) {
+            this.log.error('\nERROR: email should not contain whitespace symbols')
+            passed = false
+          }
+
+          return passed
+        }
+      },
       {
         type: 'list',
         name: 'newOrConvert',
@@ -58,13 +114,14 @@ module.exports = class VerintWidget extends BaseGenerator {
 
           return xmls
         }
-      }, {
+      },
+      /*{
         type: 'confirm',
         name: 'deleteXML',
         message: 'Do you want to delete the XML file after the import?',
         when: answers => answers.newOrConvert === 'convert',
         default: false
-      }
+      }*/
     ])
   }
 
@@ -148,6 +205,15 @@ module.exports = class VerintWidget extends BaseGenerator {
   }
 
   async configuring () {
+    const packageJson = JSON.parse(fs.readFileSync(this.templatePath('package.json')))
+
+    this.packageJson.merge(packageJson)
+
+    this.packageJson.merge({
+      name: this.answers.projectName,
+      author: `${this.answers.userName} <${this.answers.userEmail}>`
+    })
+
     if (this.answers.newOrConvert === 'convert') {
       const xmlFileContents = getXMLContents(this.destinationPath(this.answers.filePath))
 
@@ -164,10 +230,53 @@ module.exports = class VerintWidget extends BaseGenerator {
     }
   }
 
+  _copyFiles (fromFolder, toFolder, files) {
+    if (fromFolder) fromFolder += '/'
+    if (toFolder) toFolder += '/'
+
+    files.forEach(file => {
+      this.fs.copy(
+        this.templatePath(fromFolder + file),
+        this.destinationPath(toFolder + file)
+      )
+    })
+  }
+
+  _copyWithRename (fromFolder, toFolder, namePairs) {
+    if (fromFolder) fromFolder += '/'
+    if (toFolder) toFolder += '/'
+
+    namePairs.forEach(pair => {
+      this.fs.copy(
+        this.templatePath(fromFolder + pair[0]),
+        this.destinationPath(toFolder + pair[1])
+      )
+    })
+  }
+
   async writing () {
     await ifCreateDir(this.destinationPath('verint'))
     await ifCreateDir(this.destinationPath('verint/filestorage'))
     await ifCreateDir(this.destinationPath('verint/filestorage/defaultwidgets'))
+
+    this._copyWithRename('', '', [
+      ['nvmrc-template', '.nvmrc'],
+      ['npmrc-template', '.npmrc'],
+      ['gitignore-template', '.gitignore'],
+    ])
+
+    this._copyFiles('', '', ['gulpfile.js'])
+    this._copyFiles('build-scripts/gulp', 'build-scripts/gulp', ['main.js'])
+    this._copyFiles('build-scripts', 'build-scripts', ['getProjectInfo.js'])
+    this._copyFiles('verint', 'verint', ['README.md'])
+
+    this._copyFiles('../../../src', 'build-scripts', [
+      'base64.js',
+      'widgetSafeName.js',
+      'ifCreateDir.js',
+      'writeNewXML.js',
+      'importXML.js'
+    ])
 
     const widgetsPath = this.destinationPath('verint/filestorage/defaultwidgets')
 
@@ -175,8 +284,14 @@ module.exports = class VerintWidget extends BaseGenerator {
       return this._processWidgetDefinition(config, widgetsPath)
     }))
 
-    if (this.answers.deleteXML) {
+    /*if (this.answers.deleteXML) {
+      this.fs.delete(this.destinationPath(this.answers.filePath))
+    }*/
+  }
 
+  install () {
+    if (!this.options['skip-install']) { //standard cli command --skip-install
+      this.log('Installing dependencies'.toUpperCase())
     }
   }
 
