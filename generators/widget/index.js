@@ -11,10 +11,6 @@ const widgetSafeName = require('../../src/widgetSafeName')
 const getFileExtension = require('../../src/getFileExtension')
 
 module.exports = class VerintWidget extends BaseGenerator {
-  constructor (args, opts, features) {
-    super(args, opts, features)
-  }
-
   initializing () {
     this._sayHello()
     this._verifyEnvironment()
@@ -125,6 +121,77 @@ module.exports = class VerintWidget extends BaseGenerator {
     ])
   }
 
+  async configuring () {
+    const packageJson = JSON.parse(fs.readFileSync(this.templatePath('package.json')))
+
+    this.packageJson.merge(packageJson)
+
+    this.packageJson.merge({
+      name: this.answers.projectName,
+      author: `${this.answers.userName} <${this.answers.userEmail}>`
+    })
+
+    if (this.answers.newOrConvert === 'convert') {
+      const xmlFileContents = getXMLContents(this.destinationPath(this.answers.filePath))
+
+      if (
+        //todo: check if there's more to be found somewhere in this path
+        xmlFileContents
+        && xmlFileContents.scriptedContentFragments
+        && xmlFileContents.scriptedContentFragments.scriptedContentFragment
+      ) {
+        const mainSection = xmlFileContents.scriptedContentFragments.scriptedContentFragment
+
+        this.inputData.widgetConfigs = Array.isArray(mainSection) ? mainSection : [mainSection]
+      }
+    }
+  }
+
+  async writing () {
+    await ifCreateDir(this.destinationPath('verint'))
+    await ifCreateDir(this.destinationPath('verint/filestorage'))
+    await ifCreateDir(this.destinationPath('verint/filestorage/defaultwidgets'))
+
+    this._copyWithRename('', '', [
+      ['nvmrc-template', '.nvmrc'],
+      ['npmrc-template', '.npmrc'],
+      ['gitignore-template', '.gitignore'],
+    ])
+
+    this._copyFiles('', '', ['gulpfile.js'])
+    this._copyFiles('build-scripts/gulp', 'build-scripts/gulp', ['main.js'])
+    this._copyFiles('build-scripts', 'build-scripts', ['getProjectInfo.js'])
+    this._copyFiles('verint', 'verint', ['README.md'])
+
+    this._copyFiles('../../../src', 'build-scripts', [
+      'base64.js',
+      'widgetSafeName.js',
+      'ifCreateDir.js',
+      'writeNewXML.js',
+      'importXML.js'
+    ])
+
+    const widgetsPath = this.destinationPath('verint/filestorage/defaultwidgets')
+
+    await Promise.all(this.inputData.widgetConfigs.map(config => {
+      return this._processWidgetDefinition(config, widgetsPath)
+    }))
+
+    /*if (this.answers.deleteXML) {
+      this.fs.delete(this.destinationPath(this.answers.filePath))
+    }*/
+  }
+
+  install () {
+    if (!this.options['skip-install']) { //standard cli command --skip-install
+      this.log('Installing dependencies'.toUpperCase())
+    }
+  }
+
+  end () {
+    this.log('FINISHED!')
+  }
+
   async _processWidgetDefinition (widgetDefinition, widgetsPath) {
     const widgetProps = widgetDefinition._attributes
 
@@ -204,32 +271,6 @@ module.exports = class VerintWidget extends BaseGenerator {
     return null
   }
 
-  async configuring () {
-    const packageJson = JSON.parse(fs.readFileSync(this.templatePath('package.json')))
-
-    this.packageJson.merge(packageJson)
-
-    this.packageJson.merge({
-      name: this.answers.projectName,
-      author: `${this.answers.userName} <${this.answers.userEmail}>`
-    })
-
-    if (this.answers.newOrConvert === 'convert') {
-      const xmlFileContents = getXMLContents(this.destinationPath(this.answers.filePath))
-
-      if (
-        //todo: check if there's more to be found somewhere in this path
-        xmlFileContents
-        && xmlFileContents.scriptedContentFragments
-        && xmlFileContents.scriptedContentFragments.scriptedContentFragment
-      ) {
-        const mainSection = xmlFileContents.scriptedContentFragments.scriptedContentFragment
-
-        this.inputData.widgetConfigs = Array.isArray(mainSection) ? mainSection : [mainSection]
-      }
-    }
-  }
-
   _copyFiles (fromFolder, toFolder, files) {
     if (fromFolder) fromFolder += '/'
     if (toFolder) toFolder += '/'
@@ -252,50 +293,5 @@ module.exports = class VerintWidget extends BaseGenerator {
         this.destinationPath(toFolder + pair[1])
       )
     })
-  }
-
-  async writing () {
-    await ifCreateDir(this.destinationPath('verint'))
-    await ifCreateDir(this.destinationPath('verint/filestorage'))
-    await ifCreateDir(this.destinationPath('verint/filestorage/defaultwidgets'))
-
-    this._copyWithRename('', '', [
-      ['nvmrc-template', '.nvmrc'],
-      ['npmrc-template', '.npmrc'],
-      ['gitignore-template', '.gitignore'],
-    ])
-
-    this._copyFiles('', '', ['gulpfile.js'])
-    this._copyFiles('build-scripts/gulp', 'build-scripts/gulp', ['main.js'])
-    this._copyFiles('build-scripts', 'build-scripts', ['getProjectInfo.js'])
-    this._copyFiles('verint', 'verint', ['README.md'])
-
-    this._copyFiles('../../../src', 'build-scripts', [
-      'base64.js',
-      'widgetSafeName.js',
-      'ifCreateDir.js',
-      'writeNewXML.js',
-      'importXML.js'
-    ])
-
-    const widgetsPath = this.destinationPath('verint/filestorage/defaultwidgets')
-
-    await Promise.all(this.inputData.widgetConfigs.map(config => {
-      return this._processWidgetDefinition(config, widgetsPath)
-    }))
-
-    /*if (this.answers.deleteXML) {
-      this.fs.delete(this.destinationPath(this.answers.filePath))
-    }*/
-  }
-
-  install () {
-    if (!this.options['skip-install']) { //standard cli command --skip-install
-      this.log('Installing dependencies'.toUpperCase())
-    }
-  }
-
-  end () {
-    this.log('FINISHED!')
   }
 }
