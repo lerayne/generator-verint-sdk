@@ -1,6 +1,6 @@
 {
   "name": "generator-verint-sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Scaffolding Verint (ex-Telligent) platform customizations, like widgets, themes, automations etc.",
   "main": "index.js",
   "scripts": {
@@ -22,7 +22,8 @@
   },
   "homepage": "https://github.com/lerayne/generator-verint-sdk#readme",
   "files": [
-    "generators"
+    "generators",
+    "src"
   ],
   "dependencies": {
     "execa": "5.1.1",
