@@ -40,6 +40,7 @@ module.exports = class VerintWidget extends BaseGenerator {
         default: folderName
       },
 
+      // TODO: add validators to the rest of input options
       // Author name for package.json
       {
         type: 'input',
@@ -63,7 +64,7 @@ module.exports = class VerintWidget extends BaseGenerator {
         name: 'mode',
         message: 'Is it a new widget or a conversion of an existing one?',
         choices: [
-          { name: 'Create new widget', value: 'new' },
+          { name: 'Create new project with a widget', value: 'new' },
           { name: 'Add a widget to existing project', value: 'add' },
           { name: 'Convert existing XML', value: 'convert' }
         ],
@@ -147,6 +148,20 @@ module.exports = class VerintWidget extends BaseGenerator {
         when: answers => answers.configureNow,
       },
 
+      // Standard source files list
+      {
+        type: 'checkbox',
+        name: 'sourceFiles',
+        message: 'Select the files you need for this widget (leave as is if you\'re not sure)',
+        choices: [
+          { value: 'additionalCssScript.vm', checked: false },
+          { value: 'configuration.xml', checked: true },
+          { value: 'contentScript.vm', checked: true },
+          { value: 'headerScript.vm', checked: false },
+          { value: 'languageResources.xml', checked: true },
+        ]
+      },
+
       // React or not
       {
         type: 'list',
@@ -190,10 +205,6 @@ module.exports = class VerintWidget extends BaseGenerator {
   }
 
   async writing () {
-    await ifCreateDir(this.destinationPath('verint'))
-    await ifCreateDir(this.destinationPath('verint/filestorage'))
-    await ifCreateDir(this.destinationPath('verint/filestorage/defaultwidgets'))
-
     this._copyWithRename('', '', [
       ['nvmrc-template', '.nvmrc'],
       ['npmrc-template', '.npmrc'],
@@ -213,6 +224,10 @@ module.exports = class VerintWidget extends BaseGenerator {
       'importXML.js'
     ])
 
+    await ifCreateDir(this.destinationPath('verint'))
+    await ifCreateDir(this.destinationPath('verint/filestorage'))
+    await ifCreateDir(this.destinationPath('verint/filestorage/defaultwidgets'))
+
     const widgetsPath = this.destinationPath('verint/filestorage/defaultwidgets')
 
     await Promise.all(this.inputData.widgetConfigs.map(config => {
@@ -224,16 +239,18 @@ module.exports = class VerintWidget extends BaseGenerator {
     }*/
   }
 
-  install () {
-    if (!this.options['skip-install']) { //standard cli command --skip-install
-      this.log('Installing dependencies'.toUpperCase())
-    }
-  }
-
   end () {
     this.log('FINISHED!')
   }
 
+  /**
+   * Writes a widget to disc
+   *
+   * @param widgetDefinition
+   * @param widgetsPath
+   * @returns {Promise<null>}
+   * @private
+   */
   async _processWidgetDefinition (widgetDefinition, widgetsPath) {
     const widgetProps = widgetDefinition._attributes
 
@@ -337,6 +354,12 @@ module.exports = class VerintWidget extends BaseGenerator {
     })
   }
 
+  /**
+   * For prompting option - provides a list of XML files that can be used for conversion
+   *
+   * @returns {string[]}
+   * @private
+   */
   _getXmlFiles () {
     //read root folder
     let files = fs.readdirSync(this.destinationPath())
