@@ -6,4 +6,23 @@ function getXMLContents (filePath) {
   return xml2js(xmlFile, { compact: true })
 }
 
-exports.getXMLContents = getXMLContents
+function getXmlMainSections (filePath) {
+  const xmlFileContents = getXMLContents(filePath)
+
+  if (
+    xmlFileContents
+    && xmlFileContents.scriptedContentFragments
+    && xmlFileContents.scriptedContentFragments.scriptedContentFragment
+  ) {
+    const mainSection = xmlFileContents.scriptedContentFragments.scriptedContentFragment
+
+    return Array.isArray(mainSection) ? mainSection : [mainSection]
+  }
+
+  return []
+}
+
+module.exports = {
+  getXMLContents,
+  getXmlMainSections
+}

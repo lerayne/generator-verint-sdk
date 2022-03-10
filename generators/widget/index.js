@@ -3,12 +3,15 @@ const fs = require('fs')
 const path = require('path')
 const execa = require('execa')
 
-const { getXMLContents } = require('../../src/importXML')
+const { getXmlMainSections } = require('../../src/importXML')
 const ifCreateDir = require('../../src/ifCreateDir')
 const writeNewXML = require('../../src/writeNewXML')
 const { base64toText } = require('../../src/base64')
 const widgetSafeName = require('../../src/widgetSafeName')
 const getFileExtension = require('../../src/getFileExtension')
+
+const validateProjectName = require('../../src/validators/validateProjectName')
+const validateEmail = require('../../src/validators/validateEmail')
 
 module.exports = class VerintWidget extends BaseGenerator {
   initializing () {
@@ -28,123 +31,162 @@ module.exports = class VerintWidget extends BaseGenerator {
     const userEmail = await execa.command('git config --get user.email')
 
     this.answers = await this.prompt([
+      // Project name
       {
         type: 'input',
         name: 'projectName',
         message: 'Enter project name',
-        validate: value => {
-          let passed = true
-
-          if (!value) {
-            this.log.error('\nERROR: tile system name is required')
-            passed = false
-          }
-
-          if (value.match(/\s/g)) {
-            this.log.error('\nERROR: tile name should not contain whitespace symbols')
-            passed = false
-          }
-
-          if (value.match(/^\d+$/)) {
-            this.log.error('\nERROR: tile name should contain at least one letter')
-            passed = false
-          }
-
-          return passed
-        },
+        validate: validateProjectName.bind(this),
         default: folderName
       },
+
+      // Author name for package.json
       {
         type: 'input',
         name: 'userName',
         message: 'Project author name',
         default: userName.stdout,
       },
+
+      // Author email for package.json
       {
         type: 'input',
         name: 'userEmail',
         message: 'Project author email',
         default: userEmail.stdout,
-        validate: value => {
-          let passed = true
-
-          if (value.match(/\s/g)) {
-            this.log.error('\nERROR: email should not contain whitespace symbols')
-            passed = false
-          }
-
-          return passed
-        }
+        validate: validateEmail.bind(this)
       },
+
+      // Selection of create new/convert from XML
       {
         type: 'list',
-        name: 'newOrConvert',
+        name: 'mode',
         message: 'Is it a new widget or a conversion of an existing one?',
         choices: [
-          { name: 'Create new', value: 'new' },
+          { name: 'Create new widget', value: 'new' },
+          { name: 'Add a widget to existing project', value: 'add' },
           { name: 'Convert existing XML', value: 'convert' }
         ],
         default: 'new'
-      }, {
+      },
+
+      // CONVERT OPTIONS
+
+      // Selection of XML file
+      {
         type: 'list',
         name: 'filePath',
         message: 'Select an XML file',
-        when: answers => answers.newOrConvert === 'convert',
-        choices: () => {
-          //read root folder
-          let files = fs.readdirSync(this.destinationPath())
-
-          //if exists - read "import" folder
-          if (fs.existsSync(this.destinationPath('import'))) {
-            const files2 = fs.readdirSync(this.destinationPath('import'))
-            files = files.concat(files2.map(fName => 'import/' + fName))
-          }
-
-          //find xml files
-          const xmls = files.filter(fName => fName.match(/\.xml$/i))
-
-          if (!xmls.length) {
-            this.log.error('XML files not found. It should be in root or "import" directory')
-            process.exit(-1)
-          }
-
-          return xmls
-        }
+        when: answers => answers.mode === 'convert',
+        choices: this._getXmlFiles()
       },
+
+      // NEW PROJECT OPTIONS
+
+      // Widget name
+      {
+        type: 'input',
+        name: 'widgetName',
+        message: 'Name of a widget (there can be several widgets in single project)',
+        when: answers => ['new', 'add'].includes(answers.mode),
+        default: folderName
+      },
+
+      // Verint version selection
+      {
+        type: 'list',
+        name: 'verintVersion',
+        message: 'Select Verint platform version',
+        //only new: if adding existing version will be taken from an existing one
+        when: answers => answers.mode === 'new',
+        choices: [
+          { name: 'Verint 12', value: 12 },
+          { name: 'Verint 11', value: 11 }
+        ]
+      },
+
+      // Configure small features
+      {
+        type: 'list',
+        name: 'configureNow',
+        message: 'Do yoy want to configure widget properties now (caching etc)?',
+        when: answers => ['new', 'add'].includes(answers.mode),
+        choices: [
+          { name: 'No', value: false },
+          { name: 'Yes', value: true }
+        ],
+        default: false
+      },
+
+      // Description
+      {
+        type: 'input',
+        name: 'widgetDescription',
+        message: 'Widget description',
+        when: answers => answers.configureNow,
+      },
+
+      // Checkbox-style small features
+      {
+        type: 'checkbox',
+        name: 'widgetConfig',
+        message: 'Check the necessary options:',
+        when: answers => answers.configureNow,
+        choices: [
+          { name: 'Show Header by Default', value: 'showHeaderByDefault', checked: true },
+          { name: 'Is Cacheable', value: 'isCacheable' },
+          { name: 'Vary Cache by User', value: 'varyCacheByUser' },
+        ]
+      },
+
+      // CSS class name
+      {
+        type: 'input',
+        name: 'cssClass',
+        message: 'CSS Class Name',
+        when: answers => answers.configureNow,
+      },
+
+      // React or not
+      {
+        type: 'list',
+        name: 'framework',
+        message: 'Do you want to use a JS framework?',
+        when: answers => ['new', 'add'].includes(answers.mode),
+        choices: [
+          { name: 'No', value: false },
+          { name: 'React', value: 'react' }
+        ]
+      }
+
+      // Suggesting of old XML deletion
       /*{
         type: 'confirm',
         name: 'deleteXML',
         message: 'Do you want to delete the XML file after the import?',
-        when: answers => answers.newOrConvert === 'convert',
+        when: answers => answers.mode === 'convert',
         default: false
       }*/
     ])
   }
 
   async configuring () {
+    // reading template of package.json
     const packageJson = JSON.parse(fs.readFileSync(this.templatePath('package.json')))
-
     this.packageJson.merge(packageJson)
 
+    //adding data to package.json
     this.packageJson.merge({
       name: this.answers.projectName,
       author: `${this.answers.userName} <${this.answers.userEmail}>`
     })
 
-    if (this.answers.newOrConvert === 'convert') {
-      const xmlFileContents = getXMLContents(this.destinationPath(this.answers.filePath))
-
-      if (
-        //todo: check if there's more to be found somewhere in this path
-        xmlFileContents
-        && xmlFileContents.scriptedContentFragments
-        && xmlFileContents.scriptedContentFragments.scriptedContentFragment
-      ) {
-        const mainSection = xmlFileContents.scriptedContentFragments.scriptedContentFragment
-
-        this.inputData.widgetConfigs = Array.isArray(mainSection) ? mainSection : [mainSection]
-      }
-    }
+    // getting base widget configs from template/given file
+    this.inputData.widgetConfigs = getXmlMainSections(
+      this.answers.mode === 'convert'
+        ? this.destinationPath(this.answers.filePath)
+        : this.templatePath('bundle-template.xml')
+    )
   }
 
   async writing () {
@@ -293,5 +335,26 @@ module.exports = class VerintWidget extends BaseGenerator {
         this.destinationPath(toFolder + pair[1])
       )
     })
+  }
+
+  _getXmlFiles () {
+    //read root folder
+    let files = fs.readdirSync(this.destinationPath())
+
+    //if exists - read "import" folder
+    if (fs.existsSync(this.destinationPath('import'))) {
+      const files2 = fs.readdirSync(this.destinationPath('import'))
+      files = files.concat(files2.map(fName => 'import/' + fName))
+    }
+
+    //find xml files
+    const xmls = files.filter(fName => fName.match(/\.xml$/i))
+
+    if (!xmls.length) {
+      this.log.error('XML files not found. It should be in root or "import" directory')
+      process.exit(-1)
+    }
+
+    return xmls
   }
 }
