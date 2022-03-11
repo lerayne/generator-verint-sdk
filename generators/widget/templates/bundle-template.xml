@@ -1,15 +1,14 @@
 <scriptedContentFragments>
     <scriptedContentFragment
-        name="Slider Widget by Social Edge"
-        version="12"
-        description="version 1.0"
-        instanceIdentifier="0eb4062646e441a39ec02612d3c63008"
+        name=""
+        version=""
+        description=""
+        instanceIdentifier=""
         theme=""
         isCacheable="false"
         varyCacheByUser="false"
         showHeaderByDefault="true"
-        cssClass="custom-hero-widget"
-        lastModified="2021-12-27 18:37:06Z"
-    >
-    </scriptedContentFragment>
+        cssClass=""
+        lastModified=""
+    />
 </scriptedContentFragments>

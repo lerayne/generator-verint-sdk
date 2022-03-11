@@ -2,6 +2,8 @@ const BaseGenerator = require('../../src/BaseGenerator')
 const fs = require('fs')
 const path = require('path')
 const execa = require('execa')
+const { v4: uuidv4 } = require('uuid')
+const moment = require('moment')
 
 const { getXmlMainSections } = require('../../src/importXML')
 const ifCreateDir = require('../../src/ifCreateDir')
@@ -65,7 +67,7 @@ module.exports = class VerintWidget extends BaseGenerator {
         message: 'Is it a new widget or a conversion of an existing one?',
         choices: [
           { name: 'Create new project with a widget', value: 'new' },
-          { name: 'Add a widget to existing project', value: 'add' },
+          // { name: 'Add a widget to existing project', value: 'add' },
           { name: 'Convert existing XML', value: 'convert' }
         ],
         default: 'new'
@@ -79,7 +81,7 @@ module.exports = class VerintWidget extends BaseGenerator {
         name: 'filePath',
         message: 'Select an XML file',
         when: answers => answers.mode === 'convert',
-        choices: this._getXmlFiles()
+        choices: this._getXmlFiles
       },
 
       // NEW PROJECT OPTIONS
@@ -88,7 +90,7 @@ module.exports = class VerintWidget extends BaseGenerator {
       {
         type: 'input',
         name: 'widgetName',
-        message: 'Name of a widget (there can be several widgets in single project)',
+        message: 'Name of a widget (human readable)',
         when: answers => ['new', 'add'].includes(answers.mode),
         default: folderName
       },
@@ -110,7 +112,7 @@ module.exports = class VerintWidget extends BaseGenerator {
       {
         type: 'list',
         name: 'configureNow',
-        message: 'Do yoy want to configure widget properties now (caching etc)?',
+        message: 'Do you want to configure widget properties now (caching etc)?',
         when: answers => ['new', 'add'].includes(answers.mode),
         choices: [
           { name: 'No', value: false },
@@ -125,6 +127,7 @@ module.exports = class VerintWidget extends BaseGenerator {
         name: 'widgetDescription',
         message: 'Widget description',
         when: answers => answers.configureNow,
+        default: ''
       },
 
       // Checkbox-style small features
@@ -137,7 +140,8 @@ module.exports = class VerintWidget extends BaseGenerator {
           { name: 'Show Header by Default', value: 'showHeaderByDefault', checked: true },
           { name: 'Is Cacheable', value: 'isCacheable' },
           { name: 'Vary Cache by User', value: 'varyCacheByUser' },
-        ]
+        ],
+        default: ['showHeaderByDefault']
       },
 
       // CSS class name
@@ -146,12 +150,13 @@ module.exports = class VerintWidget extends BaseGenerator {
         name: 'cssClass',
         message: 'CSS Class Name',
         when: answers => answers.configureNow,
+        default: ''
       },
 
       // Standard source files list
       {
         type: 'checkbox',
-        name: 'sourceFiles',
+        name: 'staticFiles',
         message: 'Select the files you need for this widget (leave as is if you\'re not sure)',
         choices: [
           { value: 'additionalCssScript.vm', checked: false },
@@ -163,7 +168,7 @@ module.exports = class VerintWidget extends BaseGenerator {
       },
 
       // React or not
-      {
+      /*{
         type: 'list',
         name: 'framework',
         message: 'Do you want to use a JS framework?',
@@ -171,8 +176,9 @@ module.exports = class VerintWidget extends BaseGenerator {
         choices: [
           { name: 'No', value: false },
           { name: 'React', value: 'react' }
-        ]
-      }
+        ],
+        default: false
+      }*/
 
       // Suggesting of old XML deletion
       /*{
@@ -186,32 +192,103 @@ module.exports = class VerintWidget extends BaseGenerator {
   }
 
   async configuring () {
+    const {
+      projectName,
+      mode,
+      userName,
+      userEmail,
+      filePath,
+      widgetName,
+      configureNow,
+      verintVersion,
+      widgetDescription,
+      widgetConfig,
+      cssClass,
+      staticFiles,
+      framework
+    } = this.answers
+
     // reading template of package.json
-    const packageJson = JSON.parse(fs.readFileSync(this.templatePath('package.json')))
+    const packageJson = JSON.parse(fs.readFileSync(
+      this.templatePath(framework === 'react' ? 'package-react.json' : 'package.json')
+    ))
+
     this.packageJson.merge(packageJson)
 
     //adding data to package.json
     this.packageJson.merge({
-      name: this.answers.projectName,
-      author: `${this.answers.userName} <${this.answers.userEmail}>`
+      name: projectName,
+      author: `${userName} <${userEmail}>`
     })
 
     // getting base widget configs from template/given file
     this.inputData.widgetConfigs = getXmlMainSections(
-      this.answers.mode === 'convert'
-        ? this.destinationPath(this.answers.filePath)
+      mode === 'convert'
+        ? this.destinationPath(filePath)
         : this.templatePath('bundle-template.xml')
     )
+
+    if (['new', 'add'].includes(mode)) {
+
+      // 1) Set attributes
+
+      let { _attributes } = this.inputData.widgetConfigs[0]
+
+      _attributes = {
+        ..._attributes,
+        name: widgetName,
+        version: verintVersion,
+        instanceIdentifier: uuidv4().replace(/-/g, ''),
+        lastModified: moment().utc().format('YYYY-MM-DD HH:mm:ss') + 'Z'
+      }
+
+      // if "configureNow" - overwrite small features with input values. Otherwise - leave values
+      // from sample XML file
+      if (configureNow) {
+        _attributes = {
+          ..._attributes,
+          description: widgetDescription,
+          isCacheable: widgetConfig?.includes('isCacheable').toString(),
+          varyCacheByUser: widgetConfig?.includes('varyCacheByUser').toString(),
+          showHeaderByDefault: widgetConfig?.includes('showHeaderByDefault').toString(),
+          cssClass: cssClass,
+        }
+      }
+
+      this.inputData.widgetConfigs[0]._attributes = _attributes
+
+      // 2) create static files
+
+      this.log(staticFiles)
+
+      staticFiles.forEach(fileName => {
+        const [entryName, fileType] = fileName.split('.')
+
+        const fileDescription = {
+          _cdata: ''
+        }
+
+        if (fileType === 'vm') {
+          fileDescription._attributes = { language: 'Velocity' }
+        }
+
+        this.inputData.widgetConfigs[0][entryName] = fileDescription
+      })
+
+      this.log(this.inputData.widgetConfigs[0])
+    }
   }
 
   async writing () {
+    const { framework } = this.answers
+
     this._copyWithRename('', '', [
+      [(framework === 'react' ? 'gulpfile-react.js' : 'gulpfile.js'), 'gulpfile.js'],
       ['nvmrc-template', '.nvmrc'],
       ['npmrc-template', '.npmrc'],
       ['gitignore-template', '.gitignore'],
     ])
 
-    this._copyFiles('', '', ['gulpfile.js'])
     this._copyFiles('build-scripts/gulp', 'build-scripts/gulp', ['main.js'])
     this._copyFiles('build-scripts', 'build-scripts', ['getProjectInfo.js'])
     this._copyFiles('verint', 'verint', ['README.md'])
@@ -275,7 +352,11 @@ module.exports = class VerintWidget extends BaseGenerator {
     //write Verint's internal XML widget definition
     await writeNewXML(widgetInternalXml, path.join(providerPath, widgetInstanceId + '.xml'))
 
-    // save attachment files to internal XML widget
+    // create attachments dir - even if there's no attachments yet - developer might need it later
+    const attachmentsPath = path.join(providerPath, widgetInstanceId)
+    await ifCreateDir(attachmentsPath)
+
+    // save attachment files to Verint's internal folder
     const definitionKeys = Object.keys(widgetDefinition)
     for (let i = 0; i < definitionKeys.length; i++) {
       const key = definitionKeys[i]
@@ -288,14 +369,11 @@ module.exports = class VerintWidget extends BaseGenerator {
           recordData.file = [recordData.file]
         }
 
-        const attachmentsPath = path.join(providerPath, widgetInstanceId)
-        await ifCreateDir(attachmentsPath)
-
         //for each found file - decrypt it from base64 and save to folder
         for (let j = 0; j < recordData.file.length; j++) {
           const file = recordData.file[j]
 
-          await fs.promises.writeFile(
+          fs.writeFileSync(
             path.join(attachmentsPath, file._attributes.name),
             base64toText(file._cdata || file._text || '')
           )
@@ -320,7 +398,7 @@ module.exports = class VerintWidget extends BaseGenerator {
         const recordData = widgetDefinition[key]
         const newFileName = key + getFileExtension(recordData, '.xml')
 
-        await fs.promises.writeFile(
+        fs.writeFileSync(
           this.destinationPath(`src/${safeName}/statics/${newFileName}`),
           recordData._cdata ? recordData._cdata.trim() : recordData._text ? recordData._text.trim() : ''
         )
