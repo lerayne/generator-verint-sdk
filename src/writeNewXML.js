@@ -1,10 +1,15 @@
 const fs = require('fs')
 const { js2xml } = require('xml-js')
 
-async function writeNewXML (scriptedContentFragment, filePath) {
+/**
+ * @param widgetXmlObjects - object or an array of objects
+ * @param filePath
+ * @returns {Promise<void>}
+ */
+module.exports = async function writeNewXML (widgetXmlObjects, filePath) {
   const widgetObject = {
     scriptedContentFragments: {
-      scriptedContentFragment
+      scriptedContentFragment: widgetXmlObjects
     }
   }
 
@@ -17,5 +22,3 @@ async function writeNewXML (scriptedContentFragment, filePath) {
 
   return fs.promises.writeFile(filePath, xml)
 }
-
-module.exports = writeNewXML

@@ -12,6 +12,8 @@ const writeNewXML = require('../../src/writeNewXML')
 const { base64toText } = require('../../src/base64')
 const widgetSafeName = require('../../src/widgetSafeName')
 const getFileExtension = require('../../src/getFileExtension')
+const createStaticFileObjectPart = require('../../src/createStaticFileObjectPart')
+const getLastModified = require('../../src/getLastModified')
 
 const validateProjectName = require('../../src/validators/validateProjectName')
 const validateEmail = require('../../src/validators/validateEmail')
@@ -242,24 +244,22 @@ module.exports = class VerintWidget extends BaseGenerator {
     )
 
     if (['new', 'add'].includes(mode)) {
-
       // 1) Set attributes
+      let widgetXmlObject = this.inputData.widgetConfigs[0]
 
-      let { _attributes } = this.inputData.widgetConfigs[0]
-
-      _attributes = {
-        ..._attributes,
+      widgetXmlObject._attributes = {
+        ...widgetXmlObject._attributes,
         name: widgetName,
         version: verintVersion,
         instanceIdentifier: uuidv4().replace(/-/g, ''),
-        lastModified: moment().utc().format('YYYY-MM-DD HH:mm:ss') + 'Z'
+        lastModified: getLastModified()
       }
 
       // if "configureNow" - overwrite small features with input values. Otherwise - leave values
       // from sample XML file
       if (configureNow) {
-        _attributes = {
-          ..._attributes,
+        widgetXmlObject._attributes = {
+          ...widgetXmlObject._attributes,
           description: widgetDescription,
           isCacheable: widgetConfig?.includes('isCacheable').toString(),
           varyCacheByUser: widgetConfig?.includes('varyCacheByUser').toString(),
@@ -268,28 +268,13 @@ module.exports = class VerintWidget extends BaseGenerator {
         }
       }
 
-      this.inputData.widgetConfigs[0]._attributes = _attributes
-
       // 2) create static files
-
-      const finalStaticFiles = [
-        'contentScript.vm',
-        ...staticFiles
-      ]
-
-      finalStaticFiles.forEach(fileName => {
-        const [entryName, fileType] = fileName.split('.')
-
-        const fileDescription = { _cdata: '' }
-
-        if (fileType === 'vm') {
-          fileDescription._attributes = { language: 'Velocity' }
-        }
-
-        this.inputData.widgetConfigs[0][entryName] = fileDescription
+      ['contentScript.vm', ...staticFiles].forEach(fileName => {
+        const filePartial = createStaticFileObjectPart(fileName, '')
+        widgetXmlObject = { ...widgetXmlObject, ...filePartial }
       })
 
-      this.log(this.inputData.widgetConfigs[0])
+      this.inputData.widgetConfigs[0] = widgetXmlObject
     }
   }
 
@@ -336,70 +321,64 @@ module.exports = class VerintWidget extends BaseGenerator {
   }
 
   /**
-   * Writes a widget to disc
+   * Writes a widget file structure to disc
    *
-   * @param widgetDefinition
+   * @param widgetXmlObject
    * @param widgetsPath
    * @returns {Promise<null>}
    * @private
    */
-  async _processWidgetDefinition (widgetDefinition, widgetsPath) {
-    const widgetProps = widgetDefinition._attributes
+  async _processWidgetDefinition (widgetXmlObject, widgetsPath) {
+    const { _attributes } = widgetXmlObject
 
     //defining provider id and final path
-    const providerId = widgetProps.providerId || '00000000000000000000000000000000'
+    const providerId = _attributes.providerId || '00000000000000000000000000000000'
     const providerPath = path.join(widgetsPath, providerId)
 
     //make this path if needed
     await ifCreateDir(providerPath)
 
     // widget main id that is also file and folder name in Verint's FS
-    const widgetInstanceId = widgetProps.instanceIdentifier || widgetProps.instanceId
+    const widgetInstanceId = _attributes.instanceIdentifier || _attributes.instanceId
 
     //create "clean" XML w/o attachments for Verint's FS
-    const widgetInternalXml = {}
-    Object.keys(widgetDefinition).forEach(recordName => {
+    const widgetXmlObjectInternal = {}
+    Object.keys(widgetXmlObject).forEach(recordName => {
       if (recordName !== 'files') {
-        widgetInternalXml[recordName] = widgetDefinition[recordName]
+        widgetXmlObjectInternal[recordName] = widgetXmlObject[recordName]
       }
     })
 
     //write Verint's internal XML widget definition
-    await writeNewXML(widgetInternalXml, path.join(providerPath, widgetInstanceId + '.xml'))
+    await writeNewXML(widgetXmlObjectInternal, path.join(providerPath, widgetInstanceId + '.xml'))
 
     // create attachments dir - even if there's no attachments yet - developer might need it later
     const attachmentsPath = path.join(providerPath, widgetInstanceId)
     await ifCreateDir(attachmentsPath)
 
     // save attachment files to Verint's internal folder
-    const definitionKeys = Object.keys(widgetDefinition)
-    for (let i = 0; i < definitionKeys.length; i++) {
-      const key = definitionKeys[i]
-      const recordData = widgetDefinition[key]
+    const xmlObjectFields = Object.keys(widgetXmlObject)
 
-      // find "files" section
+    xmlObjectFields.forEach(key => {
+      const recordData = widgetXmlObject[key]
+
       if (key === 'files' && recordData.file) {
         //single entry is not parsed as array, so we make it an array
-        if (recordData.file.length === undefined) {
-          recordData.file = [recordData.file]
-        }
+        if (recordData.file.length === undefined) recordData.file = [recordData.file]
 
-        //for each found file - decrypt it from base64 and save to folder
-        for (let j = 0; j < recordData.file.length; j++) {
-          const file = recordData.file[j]
-
+        recordData.forEach(file => {
           fs.writeFileSync(
             path.join(attachmentsPath, file._attributes.name),
             base64toText(file._cdata || file._text || '')
           )
-        }
+        })
       }
-    }
+    })
 
     await ifCreateDir(this.destinationPath('src'))
 
     // create "widget safe name" in folder in src
-    const safeName = widgetSafeName(widgetProps.name)
+    const safeName = widgetSafeName(_attributes.name)
     const srcPath = this.destinationPath('src/' + safeName)
     await ifCreateDir(srcPath)
 
@@ -407,10 +386,10 @@ module.exports = class VerintWidget extends BaseGenerator {
     const staticPath = this.destinationPath(`src/${safeName}/statics`)
     await ifCreateDir(staticPath)
 
-    for (let k = 0; k < definitionKeys.length; k++) {
-      const key = definitionKeys[k]
+    for (let k = 0; k < xmlObjectFields.length; k++) {
+      const key = xmlObjectFields[k]
       if (key !== '_attributes' && key !== 'files') {
-        const recordData = widgetDefinition[key]
+        const recordData = widgetXmlObject[key]
         const newFileName = key + getFileExtension(recordData, '.xml')
 
         fs.writeFileSync(
