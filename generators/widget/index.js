@@ -7,6 +7,7 @@ const moment = require('moment')
 
 const { getXmlMainSections } = require('../../src/importXML')
 const ifCreateDir = require('../../src/ifCreateDir')
+const ifCreatePath = require('../../src/ifCreatePath')
 const writeNewXML = require('../../src/writeNewXML')
 const { base64toText } = require('../../src/base64')
 const widgetSafeName = require('../../src/widgetSafeName')
@@ -33,13 +34,55 @@ module.exports = class VerintWidget extends BaseGenerator {
     const userEmail = await execa.command('git config --get user.email')
 
     this.answers = await this.prompt([
+      // Selection of create new/convert from XML
+      {
+        type: 'list',
+        name: 'mode',
+        message: 'Is it a new widget or a conversion of an existing one?',
+        choices: [
+          { name: 'Create new project with a widget', value: 'new' },
+          { name: 'Add a widget to existing project', value: 'add' },
+          { name: 'Convert existing XML', value: 'convert' }
+        ],
+        default: 'new'
+      },
+
+      // "NEW" ONLY OPTIONS
+
+      // Verint version selection
+      {
+        type: 'list',
+        name: 'verintVersion',
+        message: 'Select Verint platform version',
+        //only new: if adding existing version will be taken from an existing one
+        choices: [
+          { name: 'Verint 12', value: 12 },
+          { name: 'Verint 11', value: 11 }
+        ],
+        when: answers => answers.mode === 'new'
+      },
+
+      // "CONVERT" ONLY OPTIONS
+
+      // Selection of XML file
+      {
+        type: 'list',
+        name: 'filePath',
+        message: 'Select an XML file',
+        choices: this._getXmlFilesChoices.bind(this),
+        when: answers => answers.mode === 'convert',
+      },
+
+      // "NEW" OR "CONVERT" OPTIONS
+
       // Project name
       {
         type: 'input',
         name: 'projectName',
         message: 'Enter project name',
         validate: validateProjectName.bind(this),
-        default: folderName
+        default: folderName,
+        when: answers => ['new', 'convert'].includes(answers.mode),
       },
 
       // TODO: add validators to the rest of input options
@@ -49,6 +92,7 @@ module.exports = class VerintWidget extends BaseGenerator {
         name: 'userName',
         message: 'Project author name',
         default: userName.stdout,
+        when: answers => ['new', 'convert'].includes(answers.mode),
       },
 
       // Author email for package.json
@@ -57,114 +101,20 @@ module.exports = class VerintWidget extends BaseGenerator {
         name: 'userEmail',
         message: 'Project author email',
         default: userEmail.stdout,
-        validate: validateEmail.bind(this)
+        validate: validateEmail.bind(this),
+        when: answers => ['new', 'convert'].includes(answers.mode),
       },
 
-      // Selection of create new/convert from XML
-      {
-        type: 'list',
-        name: 'mode',
-        message: 'Is it a new widget or a conversion of an existing one?',
-        choices: [
-          { name: 'Create new project with a widget', value: 'new' },
-          // { name: 'Add a widget to existing project', value: 'add' },
-          { name: 'Convert existing XML', value: 'convert' }
-        ],
-        default: 'new'
-      },
-
-      // CONVERT OPTIONS
-
-      // Selection of XML file
-      {
-        type: 'list',
-        name: 'filePath',
-        message: 'Select an XML file',
-        when: answers => answers.mode === 'convert',
-        choices: this._getXmlFiles
-      },
-
-      // NEW PROJECT OPTIONS
+      // "NEW" OR "ADD" PROJECT OPTIONS
 
       // Widget name
       {
         type: 'input',
         name: 'widgetName',
         message: 'Name of a widget (human readable)',
+        default: folderName,
+        validate: this._validateWidgetName.bind(this),
         when: answers => ['new', 'add'].includes(answers.mode),
-        default: folderName
-      },
-
-      // Verint version selection
-      {
-        type: 'list',
-        name: 'verintVersion',
-        message: 'Select Verint platform version',
-        //only new: if adding existing version will be taken from an existing one
-        when: answers => answers.mode === 'new',
-        choices: [
-          { name: 'Verint 12', value: 12 },
-          { name: 'Verint 11', value: 11 }
-        ]
-      },
-
-      // Configure small features
-      {
-        type: 'list',
-        name: 'configureNow',
-        message: 'Do you want to configure widget properties now (caching etc)?',
-        when: answers => ['new', 'add'].includes(answers.mode),
-        choices: [
-          { name: 'No', value: false },
-          { name: 'Yes', value: true }
-        ],
-        default: false
-      },
-
-      // Description
-      {
-        type: 'input',
-        name: 'widgetDescription',
-        message: 'Widget description',
-        when: answers => answers.configureNow,
-        default: ''
-      },
-
-      // Checkbox-style small features
-      {
-        type: 'checkbox',
-        name: 'widgetConfig',
-        message: 'Check the necessary options:',
-        when: answers => answers.configureNow,
-        choices: [
-          { name: 'Show Header by Default', value: 'showHeaderByDefault', checked: true },
-          { name: 'Is Cacheable', value: 'isCacheable' },
-          { name: 'Vary Cache by User', value: 'varyCacheByUser' },
-        ],
-        default: ['showHeaderByDefault']
-      },
-
-      // CSS class name
-      {
-        type: 'input',
-        name: 'cssClass',
-        message: 'CSS Class Name',
-        when: answers => answers.configureNow,
-        default: ''
-      },
-
-      // Standard source files list
-      {
-        type: 'checkbox',
-        name: 'staticFiles',
-        message: 'Select the files you need for this widget (leave as is if you\'re not sure)',
-        choices: [
-          { value: 'additionalCssScript.vm', checked: false },
-          { value: 'configuration.xml', checked: true },
-          { value: 'contentScript.vm', checked: true },
-          { value: 'headerScript.vm', checked: false },
-          { value: 'languageResources.xml', checked: true },
-        ]
       },
 
       // React or not
@@ -179,6 +129,66 @@ module.exports = class VerintWidget extends BaseGenerator {
         ],
         default: false
       }*/
+
+      // Standard source files list
+      {
+        type: 'checkbox',
+        name: 'staticFiles',
+        message: 'Select the additional files you need for this widget ' +
+          '(leave as is if you\'re not sure)',
+        choices: [
+          { value: 'additionalCssScript.vm', checked: false },
+          { value: 'configuration.xml', checked: true },
+          { value: 'headerScript.vm', checked: false },
+          { value: 'languageResources.xml', checked: true },
+        ],
+        when: answers => ['new', 'add'].includes(answers.mode)
+      },
+
+      // Configure small features
+      {
+        type: 'list',
+        name: 'configureNow',
+        message: 'Do you want to configure widget properties now (caching etc)?',
+        choices: [
+          { name: 'No', value: false },
+          { name: 'Yes', value: true }
+        ],
+        default: false,
+        when: answers => ['new', 'add'].includes(answers.mode)
+      },
+
+      // Description
+      {
+        type: 'input',
+        name: 'widgetDescription',
+        message: 'Widget description',
+        default: '',
+        when: answers => answers.configureNow,
+      },
+
+      // Checkbox-style small features
+      {
+        type: 'checkbox',
+        name: 'widgetConfig',
+        message: 'Check the necessary options:',
+        choices: [
+          { name: 'Show Header by Default', value: 'showHeaderByDefault', checked: true },
+          { name: 'Is Cacheable', value: 'isCacheable' },
+          { name: 'Vary Cache by User', value: 'varyCacheByUser' },
+        ],
+        default: ['showHeaderByDefault'],
+        when: answers => answers.configureNow,
+      },
+
+      // CSS class name
+      {
+        type: 'input',
+        name: 'cssClass',
+        message: 'CSS Class Name',
+        default: '',
+        when: answers => answers.configureNow,
+      },
 
       // Suggesting of old XML deletion
       /*{
@@ -208,18 +218,21 @@ module.exports = class VerintWidget extends BaseGenerator {
       framework
     } = this.answers
 
-    // reading template of package.json
-    const packageJson = JSON.parse(fs.readFileSync(
-      this.templatePath(framework === 'react' ? 'package-react.json' : 'package.json')
-    ))
+    //only on "new" or "convert"
+    if (mode !== 'add') {
+      // reading template of package.json
+      const packageJson = JSON.parse(fs.readFileSync(
+        this.templatePath(framework === 'react' ? 'package-react.json' : 'package.json')
+      ))
 
-    this.packageJson.merge(packageJson)
+      this.packageJson.merge(packageJson)
 
-    //adding data to package.json
-    this.packageJson.merge({
-      name: projectName,
-      author: `${userName} <${userEmail}>`
-    })
+      //adding data to package.json
+      this.packageJson.merge({
+        name: projectName,
+        author: `${userName} <${userEmail}>`
+      })
+    }
 
     // getting base widget configs from template/given file
     this.inputData.widgetConfigs = getXmlMainSections(
@@ -259,14 +272,15 @@ module.exports = class VerintWidget extends BaseGenerator {
 
       // 2) create static files
 
-      this.log(staticFiles)
+      const finalStaticFiles = [
+        'contentScript.vm',
+        ...staticFiles
+      ]
 
-      staticFiles.forEach(fileName => {
+      finalStaticFiles.forEach(fileName => {
         const [entryName, fileType] = fileName.split('.')
 
-        const fileDescription = {
-          _cdata: ''
-        }
+        const fileDescription = { _cdata: '' }
 
         if (fileType === 'vm') {
           fileDescription._attributes = { language: 'Velocity' }
@@ -280,31 +294,32 @@ module.exports = class VerintWidget extends BaseGenerator {
   }
 
   async writing () {
-    const { framework } = this.answers
+    const { framework, mode } = this.answers
 
-    this._copyWithRename('', '', [
-      [(framework === 'react' ? 'gulpfile-react.js' : 'gulpfile.js'), 'gulpfile.js'],
-      ['nvmrc-template', '.nvmrc'],
-      ['npmrc-template', '.npmrc'],
-      ['gitignore-template', '.gitignore'],
-    ])
+    // these files don't have to be copied once again if we're adding a widget to existing project
+    if (['new', 'convert'].includes(mode)) {
+      this._copyWithRename('', '', [
+        [(framework === 'react' ? 'gulpfile-react.js' : 'gulpfile.js'), 'gulpfile.js'],
+        ['nvmrc-template', '.nvmrc'],
+        ['npmrc-template', '.npmrc'],
+        ['gitignore-template', '.gitignore'],
+      ])
 
-    this._copyFiles('build-scripts/gulp', 'build-scripts/gulp', ['main.js'])
-    this._copyFiles('build-scripts', 'build-scripts', ['getProjectInfo.js'])
-    this._copyFiles('verint', 'verint', ['README.md'])
+      this._copyFiles('build-scripts/gulp', 'build-scripts/gulp', ['main.js'])
+      this._copyFiles('build-scripts', 'build-scripts', ['getProjectInfo.js'])
+      this._copyFiles('verint', 'verint', ['README.md'])
 
-    this._copyFiles('../../../src', 'build-scripts', [
-      'base64.js',
-      'widgetSafeName.js',
-      'ifCreateDir.js',
-      'writeNewXML.js',
-      'importXML.js'
-    ])
+      this._copyFiles('../../../src', 'build-scripts', [
+        'base64.js',
+        'widgetSafeName.js',
+        'ifCreateDir.js',
+        'writeNewXML.js',
+        'importXML.js'
+      ])
+    }
 
-    await ifCreateDir(this.destinationPath('verint'))
-    await ifCreateDir(this.destinationPath('verint/filestorage'))
-    await ifCreateDir(this.destinationPath('verint/filestorage/defaultwidgets'))
-
+    // these have "if not exists" inside, so OK
+    ifCreatePath(this.destinationPath(), 'verint/filestorage/defaultwidgets')
     const widgetsPath = this.destinationPath('verint/filestorage/defaultwidgets')
 
     await Promise.all(this.inputData.widgetConfigs.map(config => {
@@ -438,7 +453,7 @@ module.exports = class VerintWidget extends BaseGenerator {
    * @returns {string[]}
    * @private
    */
-  _getXmlFiles () {
+  _getXmlFilesChoices () {
     //read root folder
     let files = fs.readdirSync(this.destinationPath())
 
@@ -457,5 +472,32 @@ module.exports = class VerintWidget extends BaseGenerator {
     }
 
     return xmls
+  }
+
+  _validateWidgetName(value, answers) {
+    let passed = true
+
+    if (!value) {
+      this.log.error('\nERROR: project name is required')
+      passed = false
+    }
+
+    if (value.match(/^\s*$/)) {
+      this.log.error('\nERROR: project name should contain something')
+      passed = false
+    }
+
+    if (answers.mode === 'add') {
+      const newSafeName = widgetSafeName(value)
+
+      const existingNames = fs.readdirSync(this.destinationPath('src'))
+
+      if (existingNames.includes(newSafeName)) {
+        this.log.error('\nERROR: a widget with this name already exists')
+        passed = false
+      }
+    }
+
+    return passed
   }
 }
