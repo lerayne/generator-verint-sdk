@@ -299,7 +299,9 @@ module.exports = class VerintWidget extends BaseGenerator {
         'widgetSafeName.js',
         'ifCreateDir.js',
         'writeNewXML.js',
-        'importXML.js'
+        'importXML.js',
+        'createStaticFileObjectPart.js',
+        'getLastModified.js'
       ])
     }
 
@@ -366,7 +368,7 @@ module.exports = class VerintWidget extends BaseGenerator {
         //single entry is not parsed as array, so we make it an array
         if (recordData.file.length === undefined) recordData.file = [recordData.file]
 
-        recordData.forEach(file => {
+        recordData.file.forEach(file => {
           fs.writeFileSync(
             path.join(attachmentsPath, file._attributes.name),
             base64toText(file._cdata || file._text || '')

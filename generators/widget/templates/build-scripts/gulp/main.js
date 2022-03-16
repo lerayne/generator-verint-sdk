@@ -1,16 +1,14 @@
 const path = require('path')
 const fs = require('fs')
-const moment = require('moment')
 
 const writeNewXML = require('../writeNewXML')
 const ifCreateDir = require('../ifCreateDir')
 const { textToBase64 } = require('../base64')
-const { getXMLContents } = require('../importXML')
+const { getXmlMainSections } = require('../importXML')
 const { getProjectInfo } = require('../getProjectInfo')
 const createStaticFileObjectPart = require('../createStaticFileObjectPart')
 const getLastModified = require('../getLastModified')
-
-const manifest = require('../../package.json')
+const packageJson = require('../../package.json')
 
 
 /*
@@ -29,9 +27,7 @@ exports.buildInternalXml = async function buildInternalXml () {
     console.log('WIDGETS', JSON.stringify(WIDGETS))
 
     //checking access of each widget file
-    WIDGETS.forEach(widget => {
-      fs.accessSync(path.join(widget.widgetsFolder, widget.xmlFileName))
-    })
+    WIDGETS.forEach(widget => fs.accessSync(path.join(widget.widgetsFolder, widget.xmlFileName)))
 
     const xmlFilesToWrite = WIDGETS.map(widget => {
       //read statics files
@@ -80,61 +76,46 @@ exports.buildBundleXml = async function buildBundleXml () {
     console.log('WIDGETS', JSON.stringify(WIDGETS))
 
     //checking access of each widget file
-    for (let i = 0; i < WIDGETS.length; i++) {
-      const widget = WIDGETS[i]
-      await fs.promises.access(path.join(widget.widgetsFolder, widget.xmlFileName))
-    }
+    WIDGETS.forEach(widget => fs.accessSync(path.join(widget.widgetsFolder, widget.xmlFileName)))
 
     //this is template for future XML structure
-    const bundleXMLObject = []
-
-    //for each widget
-    for (let i = 0; i < WIDGETS.length; i++) {
-      const widget = WIDGETS[i]
-
+    const bundleXMLObject = WIDGETS.map(widget => {
       //read current xml
-      const xmlFile = getXMLContents(path.join(widget.widgetsFolder, widget.xmlFileName))
-
+      const [mainSection] = getXmlMainSections(path.join(widget.widgetsFolder, widget.xmlFileName))
       const attachmentsPath = path.join(widget.widgetsFolder, widget.folderInstanceId)
-      const widgetFiles = []
+      let widgetFiles = []
 
       //collect files base64 data for new XML
       if (fs.existsSync(attachmentsPath)) {
-        const filesList = await fs.promises.readdir(attachmentsPath)
+        const filesList = fs.readdirSync(attachmentsPath)
 
         if (filesList.length) {
-          for (let j = 0; j < filesList.length; j++) {
-            const fileName = filesList[j]
-
+          widgetFiles = filesList.map(fileName => {
             //if it's not image - read it as utf8
             const options = {}
-            if (!fileName.match(/.(png|jpg|jpeg|gif)$/i)) { options.encoding = 'utf8' }
+            if (!fileName.match(/.(png|jpg|jpeg|gif|webm)$/i)) { options.encoding = 'utf8' }
 
-            const fileContents = await fs.promises.readFile(path.join(attachmentsPath, fileName), options)
+            const fileContents = fs.readFileSync(path.join(attachmentsPath, fileName), options)
 
-            widgetFiles.push({
+            return {
               _attributes: { name: fileName },
               _text: textToBase64(fileContents)
-            })
-          }
+            }
+          })
         }
       }
 
       //copy static files directly from original XML
       const staticFiles = {}
-      const mainSection = xmlFile.scriptedContentFragments.scriptedContentFragment
       Object.keys(mainSection).forEach(recordName => {
-        const recordData = mainSection[recordName]
-        if (recordName !== '_attributes' && recordName !== 'files' && recordName !== 'requiredContext') {
-          staticFiles[recordName] = recordData
+        if (!['_attributes', 'files', 'requiredContext'].includes(recordName)) {
+          staticFiles[recordName] = mainSection[recordName]
         }
       })
 
+      // creating new widget XML object
       const newXMLObject = {
-        _attributes: {
-          ...widget.xmlMeta,
-          lastModified: moment().format('YYYY-MM-DD H:mm:ss') + 'Z'
-        },
+        _attributes: { ...widget.xmlMeta, lastModified: getLastModified() },
         ...staticFiles,
         files: widgetFiles.length ? { file: widgetFiles } : null
       }
@@ -143,14 +124,15 @@ exports.buildBundleXml = async function buildBundleXml () {
         newXMLObject.requiredContext = mainSection.requiredContext
       }
 
-      bundleXMLObject.push(newXMLObject)
-    }
+      return newXMLObject
+    })
 
     // ensure distrib directory
     const distribDir = path.join('distrib')
     await ifCreateDir(distribDir)
 
-    const xmlFileName = `${manifest.name.toLowerCase().replace(/\s/gmi, '-')}-${manifest.version}.xml`
+    const xmlFileName =
+      `${packageJson.name.toLowerCase().replace(/\s/gmi, '-')}-${packageJson.version}.xml`
 
     return writeNewXML(bundleXMLObject, path.join(distribDir, xmlFileName))
   } catch (err) {
