@@ -1,7 +1,7 @@
 const path = require('path')
 const fs = require('fs')
-const { getXmlMainSections } = require('./importXML')
-const widgetSafeName = require('./widgetSafeName')
+const { getXmlMainSections } = require('./xml')
+const { widgetSafeName } = require('./utils')
 
 /**
  * Reads file structure of "verint" folder and gets widgets with their paths and metadata for

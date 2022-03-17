@@ -1,13 +1,10 @@
 const path = require('path')
 const fs = require('fs')
 
-const writeNewXML = require('../writeNewXML')
-const ifCreateDir = require('../ifCreateDir')
-const { textToBase64 } = require('../base64')
-const { getXmlMainSections } = require('../importXML')
+const { writeNewXML, getXmlMainSections, createStaticFileObjectPart } = require('../xml')
+const { ifCreateDir } = require('../filesystem')
+const { getLastModified, textToBase64 } = require('../utils')
 const { getProjectInfo } = require('../getProjectInfo')
-const createStaticFileObjectPart = require('../createStaticFileObjectPart')
-const getLastModified = require('../getLastModified')
 const packageJson = require('../../package.json')
 
 

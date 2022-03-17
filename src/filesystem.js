@@ -1,7 +1,14 @@
 const fs = require('fs')
 const path = require('path')
 
-module.exports = function ifCreatePath(basePath, inputPath) {
+async function ifCreateDir(path) {
+  if (!fs.existsSync(path)) {
+    return fs.promises.mkdir(path)
+  }
+  return null
+}
+
+function ifCreatePath(basePath, inputPath) {
   const pathElements = inputPath.split(path.sep)
 
   let currentPath = basePath
@@ -11,4 +18,9 @@ module.exports = function ifCreatePath(basePath, inputPath) {
       fs.mkdirSync(currentPath)
     }
   })
+}
+
+module.exports = {
+  ifCreateDir,
+  ifCreatePath
 }

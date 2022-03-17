@@ -3,17 +3,15 @@ const fs = require('fs')
 const path = require('path')
 const execa = require('execa')
 const { v4: uuidv4 } = require('uuid')
-const moment = require('moment')
 
-const { getXmlMainSections } = require('../../src/importXML')
-const ifCreateDir = require('../../src/ifCreateDir')
-const ifCreatePath = require('../../src/ifCreatePath')
-const writeNewXML = require('../../src/writeNewXML')
-const { base64toText } = require('../../src/base64')
-const widgetSafeName = require('../../src/widgetSafeName')
-const getFileExtension = require('../../src/getFileExtension')
-const createStaticFileObjectPart = require('../../src/createStaticFileObjectPart')
-const getLastModified = require('../../src/getLastModified')
+const {
+  getXmlMainSections,
+  writeNewXML,
+  createStaticFileObjectPart,
+  getFileExtension
+} = require('../../src/xml')
+const { ifCreateDir, ifCreatePath } = require('../../src/filesystem')
+const { widgetSafeName, getLastModified, base64toText } = require('../../src/utils')
 
 const validateProjectName = require('../../src/validators/validateProjectName')
 const validateEmail = require('../../src/validators/validateEmail')
@@ -295,13 +293,9 @@ module.exports = class VerintWidget extends BaseGenerator {
       this._copyFiles('verint', 'verint', ['README.md'])
 
       this._copyFiles('../../../src', 'build-scripts', [
-        'base64.js',
-        'widgetSafeName.js',
-        'ifCreateDir.js',
-        'writeNewXML.js',
-        'importXML.js',
-        'createStaticFileObjectPart.js',
-        'getLastModified.js'
+        'utils.js',
+        'filesystem.js',
+        'xml.js',
       ])
     }
 
@@ -455,7 +449,7 @@ module.exports = class VerintWidget extends BaseGenerator {
     return xmls
   }
 
-  _validateWidgetName(value, answers) {
+  _validateWidgetName (value, answers) {
     let passed = true
 
     if (!value) {
