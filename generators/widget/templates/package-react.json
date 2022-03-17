@@ -21,6 +21,7 @@
     "verint",
     "telligent",
     "widget",
+    "scaffolded",
     "react"
   ],
   "dependencies": {
