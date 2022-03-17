@@ -17,6 +17,12 @@
   "standard": {
     "parser": "babel-eslint"
   },
+  "keywords": [
+    "verint",
+    "telligent",
+    "widget",
+    "react"
+  ],
   "dependencies": {
     "classnames": "2.3.1",
     "deep-extend": "0.6.0",

@@ -1,0 +1,68 @@
+## getting config panel ID for futher use
+#set($templateId = $context_v2_propertyTemplate.UniqueId)
+
+## getting config object
+#set($value = '{}')
+#set($value = $core_v2_encoding.JavascriptEncode($context_v2_propertyTemplate.Value))
+
+## Attachment files URLs can't be used as is - they're generated 
+##  dynamically, so we have to get them with this kind of request
+#set($cssConfigLink = $core_v2_widget.GetFileUrl('bundle-configuration.css'))
+
+## fix issue with HTML escaped css URL
+## todo: make a function that gets file URL and unescapes it
+#if($core_v2_utility.IsMatch($cssConfigLink, "&amp;"))
+  #set($cssConfigLink = $core_v2_encoding.HtmlDecode($cssConfigLink))
+#end
+
+## doing the same for JS files
+#set($jsVendorLink = $core_v2_encoding.HtmlAttributeEncode($core_v2_widget.GetFileUrl('bundle-vendor.js')))
+#set($jsConfigLink = $core_v2_encoding.HtmlAttributeEncode($core_v2_widget.GetFileUrl('bundle-configuration.js')))
+
+## registering some vars for future use in JS initializer
+#set($anyFileURL = $core_v2_widget.GetFileUrl('bundle-configuration.js'))
+
+
+## Widget config HTML starts here
+
+## root container to render ($-variables are replaced with their actual values by Velocity)
+<div id="$templateId"></div>
+
+## main stylesheet
+<link rel="stylesheet" href="$cssConfigLink" type="text/css" />
+
+## main end-user script
+<script type="text/javascript" src="$jsVendorLink"></script>
+<script type="text/javascript" src="$jsConfigLink"></script>
+
+## entry point (on load event for react app)
+<script type="text/javascript" id="<%= widgetSafeName %>_configuration">
+  jQuery(function() {
+    // get any file's and remove the file ending to get root URL of the widget
+    const attachmentsRootUrl = '$anyFileURL'.split('/').slice(0, -1).join('/')
+
+    let api = $context_v2_propertyTemplate.JsonApi;
+
+    jQuery.telligent.evolution.widgets['<%= widgetSafeName %>'].configuration.register({
+      widgetId: '$templateId',
+      configJSONText: '$value',
+      attachmentsRootUrl: attachmentsRootUrl,
+      lang: {
+
+      },
+      onSaveJSONText: function (newConfigJSONText) {
+        api.register({
+          hasValue: function() {
+            return true
+          },
+          val: function (v) {
+            return newConfigJSONText
+          }
+        })
+
+        // emulate click on 'Save' button
+        jQuery('a.save-form').click()
+      }
+    })
+  })
+</script>

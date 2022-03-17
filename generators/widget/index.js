@@ -21,8 +21,14 @@ module.exports = class VerintWidget extends BaseGenerator {
     this._sayHello()
     this._verifyEnvironment()
 
+    let existingPackageJson = {}
+    if (fs.existsSync(this.destinationPath('package.json'))) {
+      existingPackageJson = JSON.parse(fs.readFileSync(this.destinationPath('package.json')))
+    }
+
     this.inputData = {
-      widgetConfigs: []
+      widgetConfigs: [],
+      existingPackageJson
     }
   }
 
@@ -118,17 +124,28 @@ module.exports = class VerintWidget extends BaseGenerator {
       },
 
       // React or not
-      /*{
+      {
         type: 'list',
         name: 'framework',
         message: 'Do you want to use a JS framework?',
-        when: answers => ['new', 'add'].includes(answers.mode),
+        when: answers => {
+          // When adding a new widget to existing config - we can add a non-react widget to react
+          // project, but not the vice-versa. So if there is an existing project, and it's not a
+          // React project - we don't have an option to add a React widget to it
+          if (
+            answers.mode === 'add'
+            && this.inputData.existingPackageJson.keywords
+            && !this.inputData.existingPackageJson.keywords.includes('react')
+          ) return false
+
+          return ['new', 'add'].includes(answers.mode)
+        },
         choices: [
-          { name: 'No', value: false },
+          { name: 'None', value: false },
           { name: 'React', value: 'react' }
         ],
         default: false
-      }*/
+      },
 
       // Standard source files list
       {
@@ -136,12 +153,20 @@ module.exports = class VerintWidget extends BaseGenerator {
         name: 'staticFiles',
         message: 'Select the additional files you need for this widget ' +
           '(leave as is if you\'re not sure)',
-        choices: [
-          { value: 'additionalCssScript.vm', checked: false },
-          { value: 'configuration.xml', checked: true },
-          { value: 'headerScript.vm', checked: false },
-          { value: 'languageResources.xml', checked: true },
-        ],
+        choices: answers => {
+          const staticFiles = [
+            { value: 'additionalCssScript.vm', checked: false },
+            { value: 'headerScript.vm', checked: false },
+            { value: 'languageResources.xml', checked: true },
+          ]
+
+          //if framework is React - configuration is not optional, it's always added
+          if (answers.framework !== 'react') {
+            staticFiles.push({ value: 'configuration.xml', checked: true },)
+          }
+
+          return staticFiles
+        },
         when: answers => ['new', 'add'].includes(answers.mode)
       },
 
@@ -267,7 +292,12 @@ module.exports = class VerintWidget extends BaseGenerator {
       }
 
       // 2) create static files
-      ['contentScript.vm', ...staticFiles].forEach(fileName => {
+      // in react scenario contentScript.vm.ejs and configuration.xml are created later
+      const finalStaticFiles = framework === 'react'
+        ? staticFiles
+        : ['contentScript.vm.ejs', ...staticFiles]
+
+      finalStaticFiles.forEach(fileName => {
         const filePartial = createStaticFileObjectPart(fileName, '')
         widgetXmlObject = { ...widgetXmlObject, ...filePartial }
       })
@@ -277,7 +307,7 @@ module.exports = class VerintWidget extends BaseGenerator {
   }
 
   async writing () {
-    const { framework, mode } = this.answers
+    const { framework, mode, widgetName } = this.answers
 
     // these files don't have to be copied once again if we're adding a widget to existing project
     if (['new', 'convert'].includes(mode)) {
@@ -291,6 +321,11 @@ module.exports = class VerintWidget extends BaseGenerator {
       this._copyFiles('build-scripts/gulp', 'build-scripts/gulp', ['main.js'])
       this._copyFiles('build-scripts', 'build-scripts', ['getProjectInfo.js'])
       this._copyFiles('verint', 'verint', ['README.md'])
+
+      if (framework === 'react') {
+        this._copyFiles('build-scripts/gulp', 'build-scripts/gulp', ['react.js'])
+        this._copyFiles('', '', ['webpack.config.js'])
+      }
 
       this._copyFiles('../../../src', 'build-scripts', [
         'utils.js',
@@ -306,6 +341,43 @@ module.exports = class VerintWidget extends BaseGenerator {
     await Promise.all(this.inputData.widgetConfigs.map(config => {
       return this._processWidgetDefinition(config, widgetsPath)
     }))
+
+    if (framework === 'react' && ['new', 'add'].includes(mode)) {
+      const safeName = widgetSafeName(widgetName)
+
+      this._copyFiles('src/shared/utils', 'src/shared/utils', [
+        'asyncUtils.js',
+        'converter.js',
+        'verintEnv.js',
+        'verintNetwork.js',
+      ])
+      this._copyFiles('src', 'src/' + safeName, [
+        'components-configuration/',
+        'components-view/',
+        'constants/',
+        'statics/configuration.xml',
+        'configuration.js',
+        'view.js',
+      ])
+
+      const targetWidgetPath =
+        'verint/filestorage/defaultwidgets/00000000000000000000000000000000/'
+        + this.inputData.widgetConfigs[0]._attributes.instanceIdentifier
+
+      this._copyFiles('verint', targetWidgetPath, ['configuration-helpers.vm'])
+
+      this.fs.copyTpl(
+        this.templatePath('verint/configuration.vm.ejs'),
+        this.destinationPath(targetWidgetPath + '/configuration.vm'),
+        { widgetSafeName: safeName }
+      )
+
+      this.fs.copyTpl(
+        this.templatePath('src/statics/contentScript.vm.ejs'),
+        this.destinationPath(`src/${safeName}/statics/contentScript.vm`),
+        { widgetSafeName: safeName }
+      )
+    }
 
     /*if (this.answers.deleteXML) {
       this.fs.delete(this.destinationPath(this.answers.filePath))

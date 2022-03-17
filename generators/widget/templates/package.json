@@ -12,6 +12,11 @@
     "node": ">= 12.22.10",
     "npm": ">= 6.14.16"
   },
+  "keywords": [
+    "verint",
+    "telligent",
+    "widget"
+  ],
   "devDependencies": {
     "gulp": "4.0.2",
     "js-yaml": "4.1.0",
