@@ -51,8 +51,8 @@ module.exports = class VerintWidget extends BaseGenerator {
         name: 'mode',
         message: 'Is it a new widget or a conversion of an existing one?',
         choices: [
-          { name: 'Create new project with a widget', value: 'new', disabled: scaffolded },
-          { name: 'Create new project using existing XML', value: 'convert', disabled: scaffolded },
+          { name: 'Create a new widget project from scratch', value: 'new', disabled: scaffolded },
+          { name: 'Create a new widget project from existing XML', value: 'convert', disabled: scaffolded },
           { name: 'Add a widget to an existing project', value: 'add' },
         ],
         default: 'new'
