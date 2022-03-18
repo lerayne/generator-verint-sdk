@@ -289,9 +289,9 @@ module.exports = class VerintWidget extends BaseGenerator {
         widgetXmlObject._attributes = {
           ...widgetXmlObject._attributes,
           description: widgetDescription,
-          isCacheable: widgetConfig?.includes('isCacheable').toString(),
-          varyCacheByUser: widgetConfig?.includes('varyCacheByUser').toString(),
-          showHeaderByDefault: widgetConfig?.includes('showHeaderByDefault').toString(),
+          isCacheable: widgetConfig && widgetConfig.includes('isCacheable').toString(),
+          varyCacheByUser: widgetConfig && widgetConfig.includes('varyCacheByUser').toString(),
+          showHeaderByDefault: widgetConfig && widgetConfig.includes('showHeaderByDefault').toString(),
           cssClass: cssClass,
         }
       }
