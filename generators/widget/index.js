@@ -39,8 +39,10 @@ module.exports = class VerintWidget extends BaseGenerator {
     const userName = await execa.command('git config --get user.name')
     const userEmail = await execa.command('git config --get user.email')
 
-    const scaffolded = this.inputData.existingPackageJson.keywords
+    let scaffolded = this.inputData.existingPackageJson.keywords
       && this.inputData.existingPackageJson.keywords.includes('scaffolded')
+
+    if (scaffolded) scaffolded = 'Disabled: Project is already scaffolded'
 
     this.answers = await this.prompt([
       // Selection of create new/convert from XML
@@ -49,9 +51,9 @@ module.exports = class VerintWidget extends BaseGenerator {
         name: 'mode',
         message: 'Is it a new widget or a conversion of an existing one?',
         choices: [
-          { name: 'Create new project with a widget', value: 'new', disabled: scaffolded },
-          { name: 'Add a widget to existing project', value: 'add' },
-          { name: 'Convert existing XML', value: 'convert', disabled: scaffolded }
+          { name: 'Create a new widget project from scratch', value: 'new', disabled: scaffolded },
+          { name: 'Create a new widget project from existing XML', value: 'convert', disabled: scaffolded },
+          { name: 'Add a widget to an existing project', value: 'add' },
         ],
         default: 'new'
       },
