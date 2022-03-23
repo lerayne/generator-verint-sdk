@@ -21,14 +21,9 @@ module.exports = class VerintWidget extends BaseGenerator {
     this._sayHello()
     this._verifyEnvironment()
 
-    let existingPackageJson = {}
-    if (fs.existsSync(this.destinationPath('package.json'))) {
-      existingPackageJson = JSON.parse(fs.readFileSync(this.destinationPath('package.json')))
-    }
-
     this.inputData = {
       widgetConfigs: [],
-      existingPackageJson
+      existingPackageJson: this._getExistingPackageJson()
     }
   }
 

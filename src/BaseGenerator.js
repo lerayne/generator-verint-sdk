@@ -21,4 +21,13 @@ module.exports = class BaseGenerator extends Generator {
       process.exit(-1)
     }
   }
+
+  _getExistingPackageJson () {
+    let existingPackageJson = {}
+    if (fs.existsSync(this.destinationPath('package.json'))) {
+      existingPackageJson = JSON.parse(fs.readFileSync(this.destinationPath('package.json')))
+    }
+
+    return existingPackageJson
+  }
 }
