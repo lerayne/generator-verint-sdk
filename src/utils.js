@@ -19,9 +19,19 @@ function base64toText (base64text) {
   return Buffer.from(base64text, 'base64').toString('utf8')
 }
 
+function base64ToBinary (base64data) {
+  return Buffer.from(base64data, 'base64')
+}
+
+function binaryToBase64 (binaryData) {
+  return Buffer.from(binaryData, 'binary').toString('base64')
+}
+
 module.exports = {
   getLastModified,
   widgetSafeName,
   textToBase64,
-  base64toText
+  base64toText,
+  base64ToBinary,
+  binaryToBase64
 }

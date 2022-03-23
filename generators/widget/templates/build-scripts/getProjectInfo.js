@@ -1,6 +1,6 @@
 const path = require('path')
 const fs = require('fs')
-const { getXmlMainSections } = require('./xml')
+const { getXmlWidgets } = require('./xml')
 const { widgetSafeName } = require('./utils')
 
 /**
@@ -36,7 +36,7 @@ exports.getProjectInfo = function getProjectInfo (projectTypeName = 'defaultwidg
   const widgetXMLs = widgetDirContents.filter(fileName => fileName.match(/^[a-f\d]{32}.xml$/i))
 
   return widgetXMLs.map(xmlFileName => {
-    const [mainSection]  = getXmlMainSections(path.join(widgetDirPath, xmlFileName))
+    const [mainSection]  = getXmlWidgets(path.join(widgetDirPath, xmlFileName))
 
     return (!mainSection) ? null : {
       folderInstanceId: xmlFileName.replace(/.xml/i, ''),

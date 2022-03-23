@@ -1,17 +1,18 @@
 const BaseGenerator = require('../../src/BaseGenerator')
+const { PATH_WIDGET_FILES } = require('../../src/constants/paths')
 const fs = require('fs')
 const path = require('path')
 const execa = require('execa')
 const { v4: uuidv4 } = require('uuid')
 
 const {
-  getXmlMainSections,
-  writeNewXML,
+  getXmlWidgets,
+  writeNewWidgetXML,
   createStaticFileObjectPart,
-  getFileExtension
+  getFileExtension, writeAttachments
 } = require('../../src/xml')
 const { ifCreateDir, ifCreatePath } = require('../../src/filesystem')
-const { widgetSafeName, getLastModified, base64toText } = require('../../src/utils')
+const { widgetSafeName, getLastModified, base64ToBinary } = require('../../src/utils')
 
 const validateProjectName = require('../../src/validators/validateProjectName')
 const validateEmail = require('../../src/validators/validateEmail')
@@ -260,7 +261,7 @@ module.exports = class VerintWidget extends BaseGenerator {
     }
 
     // getting base widget configs from template/given file
-    this.inputData.widgetConfigs = getXmlMainSections(
+    this.inputData.widgetConfigs = getXmlWidgets(
       mode === 'convert'
         ? this.destinationPath(filePath)
         : this.templatePath('bundle-template.xml')
@@ -293,7 +294,7 @@ module.exports = class VerintWidget extends BaseGenerator {
 
       // 2) create static files
       // in react scenario contentScript.vm.ejs and configuration.xml are created later
-      const finalStaticFiles = framework === 'react'
+      const finalStaticFiles = (framework === 'react')
         ? staticFiles
         : ['contentScript.vm.ejs', ...staticFiles]
 
@@ -335,8 +336,8 @@ module.exports = class VerintWidget extends BaseGenerator {
     }
 
     // these have "if not exists" inside, so OK
-    ifCreatePath(this.destinationPath(), 'verint/filestorage/defaultwidgets')
-    const widgetsPath = this.destinationPath('verint/filestorage/defaultwidgets')
+    ifCreatePath(this.destinationPath(), PATH_WIDGET_FILES)
+    const widgetsPath = this.destinationPath(PATH_WIDGET_FILES)
 
     await Promise.all(this.inputData.widgetConfigs.map(config => {
       return this._processWidgetDefinition(config, widgetsPath)
@@ -361,7 +362,8 @@ module.exports = class VerintWidget extends BaseGenerator {
       ])
 
       const targetWidgetPath =
-        'verint/filestorage/defaultwidgets/00000000000000000000000000000000/'
+        PATH_WIDGET_FILES
+        + '/00000000000000000000000000000000/'
         + this.inputData.widgetConfigs[0]._attributes.instanceIdentifier
 
       this._copyFiles('verint', targetWidgetPath, ['configuration-helpers.vm'])
@@ -418,7 +420,7 @@ module.exports = class VerintWidget extends BaseGenerator {
     })
 
     //write Verint's internal XML widget definition
-    await writeNewXML(widgetXmlObjectInternal, path.join(providerPath, widgetInstanceId + '.xml'))
+    await writeNewWidgetXML(widgetXmlObjectInternal, path.join(providerPath, widgetInstanceId + '.xml'))
 
     // create attachments dir - even if there's no attachments yet - developer might need it later
     const attachmentsPath = path.join(providerPath, widgetInstanceId)
@@ -427,21 +429,7 @@ module.exports = class VerintWidget extends BaseGenerator {
     // save attachment files to Verint's internal folder
     const xmlObjectFields = Object.keys(widgetXmlObject)
 
-    xmlObjectFields.forEach(key => {
-      const recordData = widgetXmlObject[key]
-
-      if (key === 'files' && recordData.file) {
-        //single entry is not parsed as array, so we make it an array
-        if (recordData.file.length === undefined) recordData.file = [recordData.file]
-
-        recordData.file.forEach(file => {
-          fs.writeFileSync(
-            path.join(attachmentsPath, file._attributes.name),
-            base64toText(file._cdata || file._text || '')
-          )
-        })
-      }
-    })
+    writeAttachments(xmlObjectFields, 'files', attachmentsPath)
 
     await ifCreateDir(this.destinationPath('src'))
 
@@ -468,57 +456,6 @@ module.exports = class VerintWidget extends BaseGenerator {
     }
 
     return null
-  }
-
-  _copyFiles (fromFolder, toFolder, files) {
-    if (fromFolder) fromFolder += '/'
-    if (toFolder) toFolder += '/'
-
-    files.forEach(file => {
-      this.fs.copy(
-        this.templatePath(fromFolder + file),
-        this.destinationPath(toFolder + file)
-      )
-    })
-  }
-
-  _copyWithRename (fromFolder, toFolder, namePairs) {
-    if (fromFolder) fromFolder += '/'
-    if (toFolder) toFolder += '/'
-
-    namePairs.forEach(pair => {
-      this.fs.copy(
-        this.templatePath(fromFolder + pair[0]),
-        this.destinationPath(toFolder + pair[1])
-      )
-    })
-  }
-
-  /**
-   * For prompting option - provides a list of XML files that can be used for conversion
-   *
-   * @returns {string[]}
-   * @private
-   */
-  _getXmlFilesChoices () {
-    //read root folder
-    let files = fs.readdirSync(this.destinationPath())
-
-    //if exists - read "import" folder
-    if (fs.existsSync(this.destinationPath('import'))) {
-      const files2 = fs.readdirSync(this.destinationPath('import'))
-      files = files.concat(files2.map(fName => 'import/' + fName))
-    }
-
-    //find xml files
-    const xmls = files.filter(fName => fName.match(/\.xml$/i))
-
-    if (!xmls.length) {
-      this.log.error('XML files not found. It should be in root or "import" directory')
-      process.exit(-1)
-    }
-
-    return xmls
   }
 
   _validateWidgetName (value, answers) {

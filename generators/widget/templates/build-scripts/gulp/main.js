@@ -1,7 +1,7 @@
 const path = require('path')
 const fs = require('fs')
 
-const { writeNewXML, getXmlMainSections, createStaticFileObjectPart } = require('../xml')
+const { writeNewWidgetXML, getXmlWidgets, createStaticFileObjectPart } = require('../xml')
 const { ifCreateDir } = require('../filesystem')
 const { getLastModified, textToBase64 } = require('../utils')
 const { getProjectInfo } = require('../getProjectInfo')
@@ -50,7 +50,7 @@ exports.buildInternalXml = async function buildInternalXml () {
       if (widget.requiredContext) widgetXmlObject.requiredContext = widget.requiredContext
 
       //create promise to return an array of promises
-      return writeNewXML(widgetXmlObject, path.join(widget.widgetsFolder, widget.xmlFileName))
+      return writeNewWidgetXML(widgetXmlObject, path.join(widget.widgetsFolder, widget.xmlFileName))
     })
 
     return Promise.all(xmlFilesToWrite)
@@ -78,7 +78,7 @@ exports.buildBundleXml = async function buildBundleXml () {
     //this is template for future XML structure
     const bundleXMLObject = WIDGETS.map(widget => {
       //read current xml
-      const [mainSection] = getXmlMainSections(path.join(widget.widgetsFolder, widget.xmlFileName))
+      const [mainSection] = getXmlWidgets(path.join(widget.widgetsFolder, widget.xmlFileName))
       const attachmentsPath = path.join(widget.widgetsFolder, widget.folderInstanceId)
       let widgetFiles = []
 
@@ -131,7 +131,7 @@ exports.buildBundleXml = async function buildBundleXml () {
     const xmlFileName =
       `${packageJson.name.toLowerCase().replace(/\s/gmi, '-')}-${packageJson.version}.xml`
 
-    return writeNewXML(bundleXMLObject, path.join(distribDir, xmlFileName))
+    return writeNewWidgetXML(bundleXMLObject, path.join(distribDir, xmlFileName))
   } catch (err) {
     console.error(err)
   }

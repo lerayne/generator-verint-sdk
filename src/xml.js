@@ -1,12 +1,15 @@
 const fs = require('fs')
 const { js2xml, xml2js } = require('xml-js')
+const { ifCreatePath } = require('./filesystem')
+const path = require('path')
+const { base64ToBinary } = require('./utils')
 
 function getXMLContents (filePath) {
   const xmlFile = fs.readFileSync(filePath, { encoding: 'utf8' })
   return xml2js(xmlFile, { compact: true })
 }
 
-function getXmlMainSections (filePath) {
+function getXmlWidgets (filePath) {
   const xmlFileContents = getXMLContents(filePath)
 
   if (
@@ -22,12 +25,18 @@ function getXmlMainSections (filePath) {
   return []
 }
 
+function getXmlTheme (filePath) {
+  const xmlFileContents = getXMLContents(filePath)
+
+  return xmlFileContents.theme
+}
+
 /**
  * @param widgetXmlObjects - object or an array of objects
  * @param filePath
  * @returns {Promise<void>}
  */
-async function writeNewXML (widgetXmlObjects, filePath) {
+async function writeNewWidgetXML (widgetXmlObjects, filePath) {
   const widgetObject = {
     scriptedContentFragments: {
       scriptedContentFragment: widgetXmlObjects
@@ -35,6 +44,19 @@ async function writeNewXML (widgetXmlObjects, filePath) {
   }
 
   const xml = js2xml(widgetObject, {
+    compact: true,
+    spaces: 2,
+    indentCdata: true,
+    indentAttributes: true
+  })
+
+  return fs.promises.writeFile(filePath, xml)
+}
+
+async function writeNewThemeXML (themeXmlObject, filePath) {
+  const xml = js2xml({
+    theme: themeXmlObject
+  }, {
     compact: true,
     spaces: 2,
     indentCdata: true,
@@ -95,10 +117,35 @@ function getFileExtension (fileRecord, defaultExt = '') {
   return defaultExt
 }
 
+function writeAttachments (xmlObject, fieldName, destinationPath, destinationSubPath = '') {
+  for (const recordName of Object.keys(xmlObject)) {
+    //write attachment files
+    const recordData = xmlObject[recordName]
+
+    if (recordName === fieldName && recordData.file) {
+      //single entry is not parsed as array, so we make it an array
+      if (recordData.file.length === undefined) recordData.file = [recordData.file]
+
+      for (const file of recordData.file) {
+        if (destinationSubPath) {
+          ifCreatePath(destinationPath, destinationSubPath)
+        }
+        fs.writeFileSync(
+          path.join(destinationPath, destinationSubPath, file._attributes.name),
+          base64ToBinary(file._cdata || file._text || '')
+        )
+      }
+    }
+  }
+}
+
 module.exports = {
-  writeNewXML,
   getXMLContents,
-  getXmlMainSections,
+  getXmlTheme,
+  getXmlWidgets,
+  writeNewWidgetXML,
+  writeNewThemeXML,
   createStaticFileObjectPart,
-  getFileExtension
+  getFileExtension,
+  writeAttachments
 }
