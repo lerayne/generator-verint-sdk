@@ -9,7 +9,8 @@ const {
   getXmlWidgets,
   writeNewWidgetXML,
   createStaticFileObjectPart,
-  getFileExtension, writeAttachments
+  getFileExtension,
+  writeAttachments
 } = require('../../src/xml')
 const { ifCreateDir, ifCreatePath } = require('../../src/filesystem')
 const { widgetSafeName, getLastModified, base64ToBinary } = require('../../src/utils')
@@ -426,10 +427,7 @@ module.exports = class VerintWidget extends BaseGenerator {
     const attachmentsPath = path.join(providerPath, widgetInstanceId)
     await ifCreateDir(attachmentsPath)
 
-    // save attachment files to Verint's internal folder
-    const xmlObjectFields = Object.keys(widgetXmlObject)
-
-    writeAttachments(xmlObjectFields, 'files', attachmentsPath)
+    writeAttachments(widgetXmlObject, 'files', attachmentsPath)
 
     await ifCreateDir(this.destinationPath('src'))
 
@@ -441,6 +439,9 @@ module.exports = class VerintWidget extends BaseGenerator {
     //create "main widget files" in src/statics
     const staticPath = this.destinationPath(`src/${safeName}/statics`)
     await ifCreateDir(staticPath)
+
+    // save attachment files to Verint's internal folder
+    const xmlObjectFields = Object.keys(widgetXmlObject)
 
     for (let k = 0; k < xmlObjectFields.length; k++) {
       const key = xmlObjectFields[k]

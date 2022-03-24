@@ -119,12 +119,11 @@ function getFileExtension (fileRecord, defaultExt = '') {
 
 function writeAttachments (xmlObject, fieldName, destinationPath, destinationSubPath = '') {
   for (const recordName of Object.keys(xmlObject)) {
-    //write attachment files
     const recordData = xmlObject[recordName]
 
     if (recordName === fieldName && recordData.file) {
       //single entry is not parsed as array, so we make it an array
-      if (recordData.file.length === undefined) recordData.file = [recordData.file]
+      if (typeof recordData.file.length === 'undefined') recordData.file = [recordData.file]
 
       for (const file of recordData.file) {
         if (destinationSubPath) {

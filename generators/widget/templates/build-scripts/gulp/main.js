@@ -3,7 +3,7 @@ const fs = require('fs')
 
 const { writeNewWidgetXML, getXmlWidgets, createStaticFileObjectPart } = require('../xml')
 const { ifCreateDir } = require('../filesystem')
-const { getLastModified, textToBase64 } = require('../utils')
+const { getLastModified, binaryToBase64 } = require('../utils')
 const { getProjectInfo } = require('../getProjectInfo')
 const packageJson = require('../../package.json')
 
@@ -88,15 +88,11 @@ exports.buildBundleXml = async function buildBundleXml () {
 
         if (filesList.length) {
           widgetFiles = filesList.map(fileName => {
-            //if it's not image - read it as utf8
-            const options = {}
-            if (!fileName.match(/.(png|jpg|jpeg|gif|webm)$/i)) { options.encoding = 'utf8' }
-
-            const fileContents = fs.readFileSync(path.join(attachmentsPath, fileName), options)
+            const fileContents = fs.readFileSync(path.join(attachmentsPath, fileName))
 
             return {
               _attributes: { name: fileName },
-              _text: textToBase64(fileContents)
+              _text: binaryToBase64(fileContents)
             }
           })
         }
