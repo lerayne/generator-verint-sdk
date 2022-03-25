@@ -5,7 +5,7 @@ const BaseGenerator = require('../../src/BaseGenerator')
 const { getXmlTheme, writeNewThemeXML } = require('../../src/xml')
 const { writeAttachments, writeStatics, writeThemePreview } = require('../../src/xml-gen')
 const { ifCreatePath } = require('../../src/filesystem')
-const { themeTypeIds, themeTypeFolders } = require('../../src/constants/global')
+const { themeTypeIds, themeTypeFolders, themeStaticFiles } = require('../../src/constants/global')
 const { PATH_THEME_DEFINITIONS, PATH_THEME_FILES_FD } = require('../../src/constants/paths')
 const validateProjectName = require('../../src/validators/validateProjectName')
 const validateEmail = require('../../src/validators/validateEmail')
@@ -135,15 +135,16 @@ module.exports = class VerintTheme extends BaseGenerator {
         ['gitignore-template', '.gitignore'],
       ])
 
-      // this._copyFiles('build-scripts/gulp', 'build-scripts/gulp', ['main.js'])
-      // this._copyFiles('build-scripts', 'build-scripts', ['getProjectInfo.js'])
+      this._copyFiles('build-scripts/gulp', 'build-scripts/gulp', ['main.js'])
+      this._copyFiles('build-scripts', 'build-scripts', ['getThemesProjectInfo.js'])
       // this._copyFiles('verint', 'verint', ['README.md'])
 
-      /*this._copyFiles('../../../src', 'build-scripts', [
+      this._copyFiles('../../../src', 'build-scripts', [
+        'constants/',
         'utils.js',
         'filesystem.js',
         'xml.js',
-      ])*/
+      ])
     }
 
     // these have "if not exists" inside, so OK
@@ -173,15 +174,7 @@ module.exports = class VerintTheme extends BaseGenerator {
     //create "clean" XML w/o attachments for Verint's FS
     const widgetXmlObjectInternal = {}
 
-    const staticFiles = {
-      headScript: 'headScript.vm',
-      bodyScript: 'bodyScript.vm',
-      configuration: 'configuration.xml',
-      paletteTypes: 'paletteTypes.xml',
-      languageResources: 'languageResources.xml'
-    }
-
-    const internalRecords = [ ...Object.keys(staticFiles), '_attributes' ]
+    const internalRecords = [ ...Object.keys(themeStaticFiles), '_attributes' ]
 
     for (const recordName of Object.keys(themeXmlObject)) {
       if (internalRecords.includes(recordName)) {
@@ -196,7 +189,7 @@ module.exports = class VerintTheme extends BaseGenerator {
     writeAttachments(themeXmlObject, 'javascriptFiles', themeFilesPath, 'jsfiles')
     writeAttachments(themeXmlObject, 'styleFiles', themeFilesPath, 'stylesheetfiles')
 
-    writeStatics(themeXmlObject, themeStaticsPath, staticFiles)
+    writeStatics(themeXmlObject, themeStaticsPath, themeStaticFiles)
 
     //write preview image
     writeThemePreview(themeXmlObject, themeFilesPath)

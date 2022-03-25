@@ -1,6 +1,6 @@
 const { series } = require('gulp')
 
-const { buildInternalXml, buildBundleXml } = require('./build-scripts/gulp/main')
+const { buildInternalXmls, buildBundleXmls } = require('./build-scripts/gulp/main')
 
-exports.buildSimpleBundle = series(buildInternalXml, buildBundleXml)
-exports.buildSimpleInternal = buildInternalXml
+exports.buildSimpleBundle = series(buildInternalXmls, buildBundleXmls)
+exports.buildSimpleInternal = buildInternalXmls

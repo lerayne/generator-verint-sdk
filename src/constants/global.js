@@ -10,7 +10,16 @@ const themeTypeFolders = {
   blog: 'b'
 }
 
+const themeStaticFiles = {
+  headScript: 'headScript.vm',
+  bodyScript: 'bodyScript.vm',
+  configuration: 'configuration.xml',
+  paletteTypes: 'paletteTypes.xml',
+  languageResources: 'languageResources.xml'
+}
+
 module.exports = {
   themeTypeIds,
-  themeTypeFolders
+  themeTypeFolders,
+  themeStaticFiles
 }

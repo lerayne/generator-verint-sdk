@@ -27,11 +27,22 @@ function binaryToBase64 (binaryData) {
   return Buffer.from(binaryData, 'binary').toString('base64')
 }
 
+function objectReverse (object) {
+  const newObject = {}
+  for (const key of Object.keys(object)) {
+    const value = object[key]
+    newObject[value] = key
+  }
+
+  return newObject
+}
+
 module.exports = {
   getLastModified,
   widgetSafeName,
   // textToBase64,
   // base64toText,
   base64ToBinary,
-  binaryToBase64
+  binaryToBase64,
+  objectReverse
 }
