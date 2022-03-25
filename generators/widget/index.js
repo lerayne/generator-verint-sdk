@@ -5,14 +5,9 @@ const path = require('path')
 const execa = require('execa')
 const { v4: uuidv4 } = require('uuid')
 
-const {
-  getXmlWidgets,
-  writeNewWidgetXML,
-  createStaticFileObjectPart,
-  writeAttachments,
-  writeStatics
-} = require('../../src/xml')
-const { ifCreateDir, ifCreatePath } = require('../../src/filesystem')
+const { getXmlWidgets, writeNewWidgetXML, createStaticFileObjectPart, } = require('../../src/xml')
+const { writeAttachments, writeStatics } = require('../../src/xml-gen')
+const { ifCreatePath } = require('../../src/filesystem')
 const { widgetSafeName, getLastModified } = require('../../src/utils')
 
 const validateProjectName = require('../../src/validators/validateProjectName')

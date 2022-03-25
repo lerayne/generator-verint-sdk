@@ -2,11 +2,10 @@ const path = require('path')
 const fs = require('fs')
 
 const { writeNewWidgetXML, getXmlWidgets, createStaticFileObjectPart } = require('../xml')
-const { ifCreateDir } = require('../filesystem')
+const { ifCreatePath } = require('../filesystem')
 const { getLastModified, binaryToBase64 } = require('../utils')
 const { getProjectInfo } = require('../getProjectInfo')
 const packageJson = require('../../package.json')
-
 
 /*
 * Builds verint internal XML file that is used in verint file system, replicated in
@@ -121,8 +120,7 @@ exports.buildBundleXml = async function buildBundleXml () {
     })
 
     // ensure distrib directory
-    const distribDir = path.join('distrib')
-    await ifCreateDir(distribDir)
+    const distribDir = ifCreatePath('distrib')
 
     const xmlFileName =
       `${packageJson.name.toLowerCase().replace(/\s/gmi, '-')}-${packageJson.version}.xml`

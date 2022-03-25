@@ -1,18 +1,10 @@
+const path = require('path')
 const BaseGenerator = require('../../src/BaseGenerator')
-const {
-  getXmlTheme,
-  writeNewThemeXML,
-  writeAttachments,
-  writeStatics,
-  writeThemePreview
-} = require('../../src/xml')
+const { getXmlTheme, writeNewThemeXML } = require('../../src/xml')
+const { writeAttachments, writeStatics, writeThemePreview } = require('../../src/xml-gen')
 const { ifCreatePath } = require('../../src/filesystem')
 const { themeTypeIds, themeTypeFolders } = require('../../src/constants/global')
-const {
-  PATH_THEME_DEFINITIONS,
-  PATH_THEME_FILES_FD
-} = require('../../src/constants/paths')
-const path = require('path')
+const { PATH_THEME_DEFINITIONS, PATH_THEME_FILES_FD } = require('../../src/constants/paths')
 
 module.exports = class VerintTheme extends BaseGenerator {
   initializing () {
@@ -124,17 +116,17 @@ module.exports = class VerintTheme extends BaseGenerator {
 
     //create "clean" XML w/o attachments for Verint's FS
     const widgetXmlObjectInternal = {}
-    const nonStaticEntries = [
-      'files',
-      'javascriptFiles',
-      'styleFiles',
-      'pageLayouts',
-      'scopedProperties',
-      'previewImage'
-    ]
+
+    const staticFiles = {
+      headScript: 'headScript.vm',
+      bodyScript: 'bodyScript.vm',
+      configuration: 'configuration.xml',
+      paletteTypes: 'paletteTypes.xml',
+      languageResources: 'languageResources.xml'
+    }
 
     for (const recordName of Object.keys(themeXmlObject)) {
-      if (!nonStaticEntries.includes(recordName)) {
+      if (Object.keys(staticFiles).includes(recordName)) {
         widgetXmlObjectInternal[recordName] = themeXmlObject[recordName]
       }
     }
@@ -149,13 +141,7 @@ module.exports = class VerintTheme extends BaseGenerator {
     //write static source files
     const staticsPath = ifCreatePath(this.destinationPath(), 'src/statics')
 
-    writeStatics(themeXmlObject, staticsPath, {
-      headScript: 'headScript.vm',
-      bodyScript: 'bodyScript.vm',
-      configuration: 'configuration.xml',
-      paletteTypes: 'paletteTypes.xml',
-      languageResources: 'languageResources.xml'
-    })
+    writeStatics(themeXmlObject, staticsPath, staticFiles)
 
     //write preview image
     writeThemePreview(themeXmlObject, themeFilesPath)

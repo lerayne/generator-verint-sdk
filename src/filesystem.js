@@ -8,16 +8,12 @@ async function ifCreateDir(path) {
   return null
 }
 
-function ifCreatePath(basePath, inputPath) {
-  const pathElements = inputPath.split(path.sep)
-
+function ifCreatePath(basePath, inputPath = '') {
   let currentPath = basePath
-  pathElements.forEach(folderName => {
+  for (const folderName of inputPath.split(path.sep)) {
     currentPath = path.join(currentPath, folderName)
-    if(!fs.existsSync(currentPath)){
-      fs.mkdirSync(currentPath)
-    }
-  })
+    if (!fs.existsSync(currentPath)) fs.mkdirSync(currentPath)
+  }
 
   return currentPath
 }
