@@ -138,6 +138,36 @@ function writeAttachments (xmlObject, fieldName, destinationPath, destinationSub
   }
 }
 
+function writeStatics (xmlObject, staticsPath, staticFilesList = {}) {
+  for (const [recordName, recordData] of Object.entries(xmlObject)) {
+    if (Object.keys(staticFilesList).includes(recordName)) {
+      let fileName
+      if (recordData._attributes && recordData._attributes.language) {
+        fileName = recordName + getFileExtension(recordData, '.xml')
+      } else {
+        fileName = staticFilesList[recordName]
+      }
+
+      fs.writeFileSync(
+        path.join(staticsPath, fileName),
+        recordData._cdata
+          ? recordData._cdata.trim()
+          : (recordData._text ? recordData._text.trim() : '')
+      )
+    }
+  }
+}
+
+function writeThemePreview (themeXmlObject, themeFilesPath) {
+  if (themeXmlObject.previewImage) {
+    const previewPath = ifCreatePath(themeFilesPath, 'preview')
+    fs.writeFileSync(
+      path.join(previewPath, themeXmlObject.previewImage._attributes.name),
+      base64ToBinary(themeXmlObject.previewImage._cdata)
+    )
+  }
+}
+
 module.exports = {
   getXMLContents,
   getXmlTheme,
@@ -146,5 +176,7 @@ module.exports = {
   writeNewThemeXML,
   createStaticFileObjectPart,
   getFileExtension,
-  writeAttachments
+  writeAttachments,
+  writeStatics,
+  writeThemePreview
 }

@@ -18,6 +18,8 @@ function ifCreatePath(basePath, inputPath) {
       fs.mkdirSync(currentPath)
     }
   })
+
+  return currentPath
 }
 
 module.exports = {

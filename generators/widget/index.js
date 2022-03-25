@@ -9,11 +9,11 @@ const {
   getXmlWidgets,
   writeNewWidgetXML,
   createStaticFileObjectPart,
-  getFileExtension,
-  writeAttachments
+  writeAttachments,
+  writeStatics
 } = require('../../src/xml')
 const { ifCreateDir, ifCreatePath } = require('../../src/filesystem')
-const { widgetSafeName, getLastModified, base64ToBinary } = require('../../src/utils')
+const { widgetSafeName, getLastModified } = require('../../src/utils')
 
 const validateProjectName = require('../../src/validators/validateProjectName')
 const validateEmail = require('../../src/validators/validateEmail')
@@ -48,9 +48,18 @@ module.exports = class VerintWidget extends BaseGenerator {
         name: 'mode',
         message: 'Is it a new widget or a conversion of an existing one?',
         choices: [
-          { name: 'Create a new widget project from scratch', value: 'new', disabled: scaffolded },
-          { name: 'Create a new widget project from existing XML', value: 'convert', disabled: scaffolded },
-          { name: 'Add a widget to an existing project', value: 'add' },
+          {
+            name: 'Create a new widget project from scratch',
+            value: 'new',
+            disabled: scaffolded
+          }, {
+            name: 'Create a new widget project from existing XML',
+            value: 'convert',
+            disabled: scaffolded
+          }, {
+            name: 'Add a widget to an existing project',
+            value: 'add'
+          },
         ],
         default: 'new'
       },
@@ -337,8 +346,7 @@ module.exports = class VerintWidget extends BaseGenerator {
     }
 
     // these have "if not exists" inside, so OK
-    ifCreatePath(this.destinationPath(), PATH_WIDGET_FILES)
-    const widgetsPath = this.destinationPath(PATH_WIDGET_FILES)
+    const widgetsPath = ifCreatePath(this.destinationPath(), PATH_WIDGET_FILES)
 
     await Promise.all(this.inputData.widgetConfigs.map(config => {
       return this._processWidgetDefinition(config, widgetsPath)
@@ -362,10 +370,11 @@ module.exports = class VerintWidget extends BaseGenerator {
         'view.js',
       ])
 
-      const targetWidgetPath =
-        PATH_WIDGET_FILES
-        + '/00000000000000000000000000000000/'
-        + this.inputData.widgetConfigs[0]._attributes.instanceIdentifier
+      const targetWidgetPath = path.join(
+        PATH_WIDGET_FILES,
+        '00000000000000000000000000000000',
+        this.inputData.widgetConfigs[0]._attributes.instanceIdentifier
+      )
 
       this._copyFiles('verint', targetWidgetPath, ['configuration-helpers.vm'])
 
@@ -404,10 +413,7 @@ module.exports = class VerintWidget extends BaseGenerator {
 
     //defining provider id and final path
     const providerId = _attributes.providerId || '00000000000000000000000000000000'
-    const providerPath = path.join(widgetsPath, providerId)
-
-    //make this path if needed
-    await ifCreateDir(providerPath)
+    const providerPath = ifCreatePath(widgetsPath, providerId)
 
     // widget main id that is also file and folder name in Verint's FS
     const widgetInstanceId = _attributes.instanceIdentifier || _attributes.instanceId
@@ -424,37 +430,16 @@ module.exports = class VerintWidget extends BaseGenerator {
     await writeNewWidgetXML(widgetXmlObjectInternal, path.join(providerPath, widgetInstanceId + '.xml'))
 
     // create attachments dir - even if there's no attachments yet - developer might need it later
-    const attachmentsPath = path.join(providerPath, widgetInstanceId)
-    await ifCreateDir(attachmentsPath)
+    const attachmentsPath = ifCreatePath(providerPath, widgetInstanceId)
 
     writeAttachments(widgetXmlObject, 'files', attachmentsPath)
 
-    await ifCreateDir(this.destinationPath('src'))
-
     // create "widget safe name" in folder in src
     const safeName = widgetSafeName(_attributes.name)
-    const srcPath = this.destinationPath('src/' + safeName)
-    await ifCreateDir(srcPath)
 
-    //create "main widget files" in src/statics
-    const staticPath = this.destinationPath(`src/${safeName}/statics`)
-    await ifCreateDir(staticPath)
+    const staticPath = ifCreatePath(this.destinationPath(), `src/${safeName}/statics`)
 
-    // save attachment files to Verint's internal folder
-    const xmlObjectFields = Object.keys(widgetXmlObject)
-
-    for (let k = 0; k < xmlObjectFields.length; k++) {
-      const key = xmlObjectFields[k]
-      if (key !== '_attributes' && key !== 'files') {
-        const recordData = widgetXmlObject[key]
-        const newFileName = key + getFileExtension(recordData, '.xml')
-
-        fs.writeFileSync(
-          this.destinationPath(`src/${safeName}/statics/${newFileName}`),
-          recordData._cdata ? recordData._cdata.trim() : recordData._text ? recordData._text.trim() : ''
-        )
-      }
-    }
+    writeStatics(widgetXmlObject, staticPath)
 
     return null
   }
