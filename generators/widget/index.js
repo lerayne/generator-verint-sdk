@@ -25,7 +25,7 @@ module.exports = class VerintWidget extends BaseGenerator {
   }
 
   async prompting () {
-    const pathChunks = this.env.cwd.split('/')
+    const pathChunks = this.env.cwd.split(path.sep)
     const folderName = pathChunks[pathChunks.length - 1]
 
     const userName = await execa.command('git config --get user.name')
@@ -250,7 +250,7 @@ module.exports = class VerintWidget extends BaseGenerator {
     } = this.answers
 
     //only on "new" or "convert"
-    if (mode !== 'add') {
+    if (['new', 'convert'].includes(mode)) {
       // reading template of package.json
       const packageJson = JSON.parse(fs.readFileSync(
         this.templatePath(framework === 'react' ? 'package-react.json' : 'package.json')

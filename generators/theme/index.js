@@ -1,10 +1,15 @@
 const path = require('path')
+const execa = require('execa')
+const fs = require('fs')
 const BaseGenerator = require('../../src/BaseGenerator')
 const { getXmlTheme, writeNewThemeXML } = require('../../src/xml')
 const { writeAttachments, writeStatics, writeThemePreview } = require('../../src/xml-gen')
 const { ifCreatePath } = require('../../src/filesystem')
 const { themeTypeIds, themeTypeFolders } = require('../../src/constants/global')
 const { PATH_THEME_DEFINITIONS, PATH_THEME_FILES_FD } = require('../../src/constants/paths')
+const validateProjectName = require('../../src/validators/validateProjectName')
+const validateEmail = require('../../src/validators/validateEmail')
+
 
 module.exports = class VerintTheme extends BaseGenerator {
   initializing () {
@@ -18,10 +23,16 @@ module.exports = class VerintTheme extends BaseGenerator {
   }
 
   async prompting () {
+    const pathChunks = this.env.cwd.split(path.sep)
+    const folderName = pathChunks[pathChunks.length - 1]
+
     let scaffolded = this.inputData.existingPackageJson.keywords
       && this.inputData.existingPackageJson.keywords.includes('scaffolded')
 
     if (scaffolded) scaffolded = 'Disabled: Project is already scaffolded'
+
+    const userName = await execa.command('git config --get user.name')
+    const userEmail = await execa.command('git config --get user.email')
 
     this.answers = await this.prompt([
       // Selection of scenario
@@ -37,7 +48,6 @@ module.exports = class VerintTheme extends BaseGenerator {
           }, {
             name: 'Add a theme to the project using existing XML',
             value: 'add-xml',
-            disabled: scaffolded
           },
         ],
         default: 'new-xml'
@@ -49,7 +59,6 @@ module.exports = class VerintTheme extends BaseGenerator {
         name: 'filePath',
         message: 'Select an XML file',
         choices: this._getXmlFilesChoices,
-        when: answers => answers.mode === 'new-xml'
       },
 
       {
@@ -61,12 +70,55 @@ module.exports = class VerintTheme extends BaseGenerator {
           { name: 'Group', value: 'group' },
           { name: 'Blog', value: 'blog' }
         ]
-      }
+      },
+
+      {
+        type: 'input',
+        name: 'projectName',
+        message: 'Enter project name',
+        validate: validateProjectName.bind(this),
+        default: folderName,
+        when: answers => ['new-xml'].includes(answers.mode),
+      },
+
+      // TODO: add validators to the rest of input options
+      // Author name for package.json
+      {
+        type: 'input',
+        name: 'userName',
+        message: 'Project author name',
+        default: userName.stdout,
+        when: answers => ['new-xml'].includes(answers.mode),
+      },
+
+      // Author email for package.json
+      {
+        type: 'input',
+        name: 'userEmail',
+        message: 'Project author email',
+        default: userEmail.stdout,
+        validate: validateEmail.bind(this),
+        when: answers => ['new-xml'].includes(answers.mode),
+      },
     ])
   }
 
   async configuring () {
-    const { filePath } = this.answers
+    const { filePath, mode, projectName, userName, userEmail } = this.answers
+
+    //only on "new" or "convert"
+    if (['new-xml'].includes(mode)) {
+      // reading template of package.json
+      const packageJson = JSON.parse(fs.readFileSync(this.templatePath('package.json')))
+
+      this.packageJson.merge(packageJson)
+
+      //adding data to package.json
+      this.packageJson.merge({
+        name: projectName,
+        author: `${userName} <${userEmail}>`
+      })
+    }
 
     this.inputData.themeConfig = getXmlTheme(this.destinationPath(filePath))
   }
@@ -95,23 +147,27 @@ module.exports = class VerintTheme extends BaseGenerator {
     }
 
     // these have "if not exists" inside, so OK
-    const pathThemeXmlFinal = path.join(PATH_THEME_DEFINITIONS, themeTypeIds[themeType])
-    const themeXmlPath = ifCreatePath(this.destinationPath(), pathThemeXmlFinal)
+    const themeXmlPath = ifCreatePath(
+      this.destinationPath(),
+      path.join(PATH_THEME_DEFINITIONS, themeTypeIds[themeType])
+    )
 
-    const pathThemeFilesFinal = (
+    const themeFilesPath = ifCreatePath(
+      this.destinationPath(),
       path.join(PATH_THEME_FILES_FD, themeTypeFolders[themeType], themeConfig._attributes.id)
     )
-    const themeFilesPath = ifCreatePath(this.destinationPath(), pathThemeFilesFinal)
 
-    await this._processThemeDefinition(themeConfig, themeXmlPath, themeFilesPath)
+    const themeStaticsPath = ifCreatePath(
+      this.destinationPath(),
+      path.join('src', 'statics', themeType, themeConfig._attributes.id)
+    )
 
-    /*this.fs.write(
-      this.destinationPath(filePath + '.json'),
-      JSON.stringify(this.inputData.themeConfigs, null, 2)
-    )*/
+    await this._processThemeDefinition(themeConfig, themeXmlPath, themeFilesPath, themeStaticsPath)
+
+    return null
   }
 
-  async _processThemeDefinition (themeXmlObject, themeXmlPath, themeFilesPath) {
+  async _processThemeDefinition (themeXmlObject, themeXmlPath, themeFilesPath, themeStaticsPath) {
     const { _attributes } = themeXmlObject
 
     //create "clean" XML w/o attachments for Verint's FS
@@ -125,8 +181,10 @@ module.exports = class VerintTheme extends BaseGenerator {
       languageResources: 'languageResources.xml'
     }
 
+    const internalRecords = [ ...Object.keys(staticFiles), '_attributes' ]
+
     for (const recordName of Object.keys(themeXmlObject)) {
-      if (Object.keys(staticFiles).includes(recordName)) {
+      if (internalRecords.includes(recordName)) {
         widgetXmlObjectInternal[recordName] = themeXmlObject[recordName]
       }
     }
@@ -138,10 +196,7 @@ module.exports = class VerintTheme extends BaseGenerator {
     writeAttachments(themeXmlObject, 'javascriptFiles', themeFilesPath, 'jsfiles')
     writeAttachments(themeXmlObject, 'styleFiles', themeFilesPath, 'stylesheetfiles')
 
-    //write static source files
-    const staticsPath = ifCreatePath(this.destinationPath(), 'src/statics')
-
-    writeStatics(themeXmlObject, staticsPath, staticFiles)
+    writeStatics(themeXmlObject, themeStaticsPath, staticFiles)
 
     //write preview image
     writeThemePreview(themeXmlObject, themeFilesPath)

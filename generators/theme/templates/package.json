@@ -1,0 +1,27 @@
+{
+  "name": "",
+  "version": "0.1.0",
+  "description": "",
+  "main": "gulpfile.js",
+  "scripts": {
+    "build-simple": "npx gulp buildSimpleBundle",
+    "build-internal": "npx gulp buildSimpleInternal"
+  },
+  "author": "",
+  "engines": {
+    "node": ">= 16.14.2",
+    "npm": ">= 8.5.0"
+  },
+  "keywords": [
+    "verint",
+    "telligent",
+    "theme",
+    "scaffolded"
+  ],
+  "devDependencies": {
+    "gulp": "4.0.2",
+    "js-yaml": "4.1.0",
+    "moment": "2.29.1",
+    "xml-js": "1.6.11"
+  }
+}
