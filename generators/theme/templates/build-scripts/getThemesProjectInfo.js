@@ -8,7 +8,7 @@ const { getXmlTheme } = require('./xml')
 
 function getThemeInfo (themeType, xmlFilePath) {
   const themeXml = getXmlTheme(xmlFilePath)
-  const { _attributes } = themeXml
+  const { _attributes, styleFiles } = themeXml
 
   const {
     id,
@@ -16,13 +16,21 @@ function getThemeInfo (themeType, xmlFilePath) {
     name
   } = _attributes
 
-  return {
+  const newThemeInfo = {
     id,
     name,
     themeType,
     themeTypeId,
-    _attributes
+    _attributes,
   }
+
+  if (styleFiles && styleFiles.file) {
+    newThemeInfo.styleFiles = {
+      file: styleFiles.file.length ? styleFiles.file : [styleFiles.file]
+    }
+  }
+
+  return newThemeInfo
 }
 
 module.exports = function getThemesProjectInfo () {
