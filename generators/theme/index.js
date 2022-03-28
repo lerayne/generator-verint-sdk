@@ -10,7 +10,6 @@ const { PATH_THEME_DEFINITIONS, PATH_THEME_FILES_FD } = require('../../src/const
 const validateProjectName = require('../../src/validators/validateProjectName')
 const validateEmail = require('../../src/validators/validateEmail')
 
-
 module.exports = class VerintTheme extends BaseGenerator {
   initializing () {
     this._sayHello()
@@ -174,11 +173,22 @@ module.exports = class VerintTheme extends BaseGenerator {
     //create "clean" XML w/o attachments for Verint's FS
     const widgetXmlObjectInternal = {}
 
-    const internalRecords = [ ...Object.keys(themeStaticFiles), '_attributes' ]
+    const internalRecords = [...Object.keys(themeStaticFiles), '_attributes']
 
-    for (const recordName of Object.keys(themeXmlObject)) {
+    for (const [recordName, recordValue] of Object.entries(themeXmlObject)) {
       if (internalRecords.includes(recordName)) {
-        widgetXmlObjectInternal[recordName] = themeXmlObject[recordName]
+        widgetXmlObjectInternal[recordName] = recordValue
+      }
+
+      //separate processing of styleFiles, because they have options that need to be saved
+      if (recordName === 'styleFiles' && recordValue.file) {
+        const styleFiles = (recordValue.file.length) ? recordValue.file : [recordValue.file]
+        widgetXmlObjectInternal.styleFiles = {
+          file: styleFiles.map(file => {
+            const { _cdata, ...rest } = file
+            return rest
+          })
+        }
       }
     }
 
