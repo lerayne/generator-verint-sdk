@@ -3,10 +3,15 @@ const execa = require('execa')
 const fs = require('fs')
 const BaseGenerator = require('../../src/BaseGenerator')
 const { getXmlTheme, writeNewThemeXML } = require('../../src/xml')
-const { writeAttachments, writeStatics, writeThemePreview } = require('../../src/xml-gen')
+const {
+  writeAttachments,
+  writeStatics,
+  writeThemePreview,
+  writePageLayouts
+} = require('../../src/xml-gen')
 const { ifCreatePath } = require('../../src/filesystem')
 const { themeTypeIds, themeTypeFolders, themeStaticFiles } = require('../../src/constants/global')
-const { PATH_THEME_DEFINITIONS, PATH_THEME_FILES_FD } = require('../../src/constants/paths')
+const { PATH_THEME_DEFINITIONS, PATH_THEME_FILES_FD, PATH_THEME_LAYOUTS } = require('../../src/constants/paths')
 const validateProjectName = require('../../src/validators/validateProjectName')
 const validateEmail = require('../../src/validators/validateEmail')
 
@@ -162,12 +167,32 @@ module.exports = class VerintTheme extends BaseGenerator {
       path.join('src', 'statics', themeType, themeConfig._attributes.id)
     )
 
-    await this._processThemeDefinition(themeConfig, themeXmlPath, themeFilesPath, themeStaticsPath)
+    let themeLayoutsPath = ''
+    if (themeConfig.pageLayouts) {
+      themeLayoutsPath = ifCreatePath(
+        this.destinationPath(),
+        path.join(PATH_THEME_LAYOUTS, themeConfig._attributes.id)
+      )
+    }
+
+    await this._processThemeDefinition(
+      themeConfig,
+      themeXmlPath,
+      themeFilesPath,
+      themeStaticsPath,
+      themeLayoutsPath
+    )
 
     return null
   }
 
-  async _processThemeDefinition (themeXmlObject, themeXmlPath, themeFilesPath, themeStaticsPath) {
+  async _processThemeDefinition (
+    themeXmlObject,
+    themeXmlPath,
+    themeFilesPath,
+    themeStaticsPath,
+    themeLayoutsPath
+  ) {
     const { _attributes } = themeXmlObject
 
     //create "clean" XML w/o attachments for Verint's FS
@@ -176,6 +201,7 @@ module.exports = class VerintTheme extends BaseGenerator {
     const internalRecords = [...Object.keys(themeStaticFiles), '_attributes']
 
     for (const [recordName, recordValue] of Object.entries(themeXmlObject)) {
+      //copy static files
       if (internalRecords.includes(recordName)) {
         widgetXmlObjectInternal[recordName] = recordValue
       }
@@ -203,5 +229,7 @@ module.exports = class VerintTheme extends BaseGenerator {
 
     //write preview image
     writeThemePreview(themeXmlObject, themeFilesPath)
+
+    writePageLayouts(themeXmlObject, themeLayoutsPath)
   }
 }

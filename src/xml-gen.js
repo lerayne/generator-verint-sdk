@@ -2,6 +2,7 @@ const fs = require('fs')
 const path = require('path')
 const { ifCreatePath } = require('./filesystem')
 const { base64ToBinary } = require('./utils')
+const { js2xml } = require('xml-js')
 
 function getFileExtension (fileRecord, defaultExt = '') {
   const extensionMapping = {
@@ -71,8 +72,41 @@ function writeThemePreview (themeXmlObject, themeFilesPath) {
   }
 }
 
+function writePageLayouts (themeXmlObject, themeLayoutsPath) {
+  if (themeXmlObject.pageLayouts) {
+
+    const layoutsXml = {
+      theme: {
+        _attributes: { name: themeXmlObject._attributes.id },
+        defaultHeaders: themeXmlObject.pageLayouts.headers,
+        defaultFooters: themeXmlObject.pageLayouts.footers,
+        defaultFragmentPages: themeXmlObject.pageLayouts.pages
+      }
+    }
+
+    fs.writeFileSync(
+      path.join(themeLayoutsPath, themeXmlObject._attributes.themeTypeId + '.xml'),
+      js2xml(layoutsXml, {
+        compact: true,
+        spaces: 2,
+        indentCdata: true,
+        indentAttributes: true,
+        attributeValueFn: value => {
+          return value.replace(/&(?!amp;)/gui, '&amp;')
+        }
+      })
+    )
+
+    fs.writeFileSync(
+      path.join(themeLayoutsPath, themeXmlObject._attributes.themeTypeId + '.json'),
+      JSON.stringify(layoutsXml, null, 2)
+    )
+  }
+}
+
 module.exports = {
   writeAttachments,
   writeStatics,
-  writeThemePreview
+  writeThemePreview,
+  writePageLayouts
 }
