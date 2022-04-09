@@ -272,10 +272,12 @@ exports.buildBundleXmls = async function buildBundleXmls () {
           themeConfig.id
         ))
 
+        const themeSafeName = widgetSafeName(themeConfig.name)
+
         // save new distributive XML
         promises.push(writeNewThemeXML(
           themeObjectXml,
-          path.join(distribPath, widgetSafeName(themeConfig.name) + '.xml')
+          path.join(distribPath, `${themeSafeName}-${themeType.toUpperCase()}-${packageJson.version}.xml`)
         ))
       }
     }
