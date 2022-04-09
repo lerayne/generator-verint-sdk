@@ -1,6 +1,7 @@
 const path = require('path')
 const fs = require('fs')
 const { xml2js } = require('xml-js')
+const inquirer = require('inquirer')
 const getThemesProjectInfo = require('../getThemesProjectInfo')
 const { getLastModified, objectReverse, binaryToBase64, widgetSafeName } = require('../utils')
 const { themeStaticFiles, themeTypeIds, themeTypeFolders } = require('../constants/global')
@@ -192,6 +193,16 @@ exports.buildBundleXmls = async function buildBundleXmls () {
   const promises = []
 
   if (THEMES) {
+
+    const answers = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'includeLayouts',
+        message: 'Do you want to include page layouts into bundle?',
+        default: true
+      }
+    ])
+
     for (const [themeType, themesOfType] of Object.entries(THEMES)) {
       for (const themeConfig of themesOfType) {
 
@@ -209,7 +220,13 @@ exports.buildBundleXmls = async function buildBundleXmls () {
           ...readThemeAttachments(themeConfig, themeType, 'files', 'files'),
           ...readThemeAttachments(themeConfig, themeType, 'jsfiles', 'javascriptFiles'),
           ...readThemeAttachments(themeConfig, themeType, 'stylesheetfiles', 'styleFiles'),
-          ...readThemeLayouts(themeConfig)
+        }
+
+        if (answers.includeLayouts) {
+          themeObjectXml = {
+            ...themeObjectXml,
+            ...readThemeLayouts(themeConfig)
+          }
         }
 
         const distribPath = ifCreatePath('', path.join(

@@ -20,6 +20,7 @@
   ],
   "devDependencies": {
     "gulp": "4.0.2",
+    "inquirer": "8.2.2",
     "js-yaml": "4.1.0",
     "moment": "2.29.1",
     "xml-js": "1.6.11"
