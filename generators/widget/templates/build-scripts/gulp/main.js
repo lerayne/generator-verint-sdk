@@ -3,7 +3,7 @@ const fs = require('fs')
 
 const { writeNewWidgetXML, getXmlWidgets, createStaticFileObjectPart } = require('../xml')
 const { ifCreatePath } = require('../filesystem')
-const { getLastModified, binaryToBase64 } = require('../utils')
+const { getLastModified, binaryToBase64, getNewDescription } = require('../utils')
 const { getProjectInfo } = require('../getProjectInfo')
 const packageJson = require('../../package.json')
 
@@ -32,7 +32,14 @@ exports.buildInternalXml = async function buildInternalXml () {
 
       // initializing future widget XML
       let widgetXmlObject = {
-        _attributes: { ...widget.xmlMeta, lastModified: getLastModified() },
+        _attributes: {
+          ...widget.xmlMeta,
+          lastModified: getLastModified(),
+          description: getNewDescription(
+            widget.xmlMeta.description,
+            packageJson.version
+          )
+        },
       }
 
       // read statics from src/{widgetName}/statics and put them into the object

@@ -37,6 +37,22 @@ function objectReverse (object) {
   return newObject
 }
 
+function getNewDescription (description, version) {
+  const newVersion = `(version ${version})`
+  const regExp = /\(version .+\)$/iu
+
+  let newDescription
+  if (description.match(regExp)) {
+    newDescription = description.replace(regExp, newVersion)
+  } else if (!description.match(/^\s*$/u)) {
+    newDescription = description + ' ' + newVersion
+  } else {
+    newDescription = newVersion
+  }
+
+  return newDescription
+}
+
 module.exports = {
   getLastModified,
   widgetSafeName,
@@ -44,5 +60,6 @@ module.exports = {
   // base64toText,
   base64ToBinary,
   binaryToBase64,
-  objectReverse
+  objectReverse,
+  getNewDescription
 }

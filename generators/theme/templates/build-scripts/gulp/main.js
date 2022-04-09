@@ -3,7 +3,13 @@ const fs = require('fs')
 const { xml2js } = require('xml-js')
 const inquirer = require('inquirer')
 const getThemesProjectInfo = require('../getThemesProjectInfo')
-const { getLastModified, objectReverse, binaryToBase64, widgetSafeName } = require('../utils')
+const {
+  getLastModified,
+  objectReverse,
+  binaryToBase64,
+  widgetSafeName,
+  getNewDescription
+} = require('../utils')
 const { themeStaticFiles, themeTypeIds, themeTypeFolders } = require('../constants/global')
 const {
   PATH_THEME_DEFINITIONS,
@@ -12,6 +18,7 @@ const {
 } = require('../constants/paths')
 const { writeNewThemeXML, getXmlTheme } = require('../xml')
 const { ifCreatePath } = require('../filesystem')
+const packageJson = require('../../package.json')
 
 /**
  * 1) Read theme configs from verint/filestorage/themefiles/d
@@ -33,7 +40,11 @@ exports.buildInternalXmls = async function buildInternalXmls () {
         const newInternalXml = {
           _attributes: {
             ...themeConfig._attributes,
-            lastModified: getLastModified()
+            lastModified: getLastModified(),
+            description: getNewDescription(
+              themeConfig._attributes.description,
+              packageJson.version
+            )
           }
         }
 
