@@ -194,15 +194,41 @@ exports.buildBundleXmls = async function buildBundleXmls () {
 
   if (THEMES) {
 
-    const answers = await inquirer.prompt([
-      {
+    // gathering theme data for inquiring
+    const questions = []
+    let answers = {}
+    let pageLayoutsFound = false
+
+    for (const themesOfType of Object.values(THEMES)) {
+      for (const themeConfig of themesOfType) {
+        const layoutsPath = path.join(
+          PATH_THEME_LAYOUTS,
+          themeConfig._attributes.id,
+          themeConfig._attributes.themeTypeId + '.xml'
+        )
+
+        if (fs.existsSync(layoutsPath)) {
+          pageLayoutsFound = true
+        }
+      }
+    }
+
+    // adding questions
+    if (pageLayoutsFound) {
+      questions.push({
         type: 'confirm',
         name: 'includeLayouts',
         message: 'Do you want to include page layouts into bundle?',
         default: true
-      }
-    ])
+      })
+    }
 
+    //inquiring
+    if (questions.length) {
+      answers = await inquirer.prompt(questions)
+    }
+
+    //writing bundle XMLs
     for (const [themeType, themesOfType] of Object.entries(THEMES)) {
       for (const themeConfig of themesOfType) {
 
