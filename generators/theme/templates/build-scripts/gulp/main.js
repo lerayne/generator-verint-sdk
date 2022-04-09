@@ -1,9 +1,14 @@
 const path = require('path')
 const fs = require('fs')
+const { xml2js } = require('xml-js')
 const getThemesProjectInfo = require('../getThemesProjectInfo')
 const { getLastModified, objectReverse, binaryToBase64, widgetSafeName } = require('../utils')
 const { themeStaticFiles, themeTypeIds, themeTypeFolders } = require('../constants/global')
-const { PATH_THEME_DEFINITIONS, PATH_THEME_FILES_FD } = require('../constants/paths')
+const {
+  PATH_THEME_DEFINITIONS,
+  PATH_THEME_FILES_FD,
+  PATH_THEME_LAYOUTS
+} = require('../constants/paths')
 const { writeNewThemeXML, getXmlTheme } = require('../xml')
 const { ifCreatePath } = require('../filesystem')
 
@@ -122,6 +127,36 @@ function readThemeAttachments (themeConfig, themeType, subPath, xmlRecordName) {
   return objectPart
 }
 
+function readThemeLayouts (themeConfig) {
+  const objectPart = {}
+
+  const layoutsPath = path.join(
+    PATH_THEME_LAYOUTS,
+    themeConfig._attributes.id,
+    themeConfig._attributes.themeTypeId + '.xml'
+  )
+
+  if (fs.existsSync(layoutsPath)) {
+    const layoutsXml = xml2js(fs.readFileSync(layoutsPath), { compact: true })
+
+    objectPart.pageLayouts = {}
+
+    if (layoutsXml?.theme?.defaultHeaders) {
+      objectPart.pageLayouts.headers = layoutsXml.theme.defaultHeaders
+    }
+
+    if (layoutsXml?.theme?.defaultFooters) {
+      objectPart.pageLayouts.footers = layoutsXml.theme.defaultFooters
+    }
+
+    if (layoutsXml?.theme?.defaultFragmentPages) {
+      objectPart.pageLayouts.pages = layoutsXml.theme.defaultFragmentPages
+    }
+  }
+
+  return objectPart
+}
+
 function readThemePreview (themeConfig, themeType) {
   const objectPart = {}
 
@@ -174,6 +209,7 @@ exports.buildBundleXmls = async function buildBundleXmls () {
           ...readThemeAttachments(themeConfig, themeType, 'files', 'files'),
           ...readThemeAttachments(themeConfig, themeType, 'jsfiles', 'javascriptFiles'),
           ...readThemeAttachments(themeConfig, themeType, 'stylesheetfiles', 'styleFiles'),
+          ...readThemeLayouts(themeConfig)
         }
 
         const distribPath = ifCreatePath('', path.join(

@@ -91,16 +91,14 @@ function writePageLayouts (themeXmlObject, themeLayoutsPath) {
         spaces: 2,
         indentCdata: true,
         indentAttributes: true,
-        attributeValueFn: value => {
-          return value.replace(/&(?!amp;)/gui, '&amp;')
-        }
+        attributeValueFn: value => value.replace(/&(?!amp;)/gui, '&amp;')
       })
     )
 
-    fs.writeFileSync(
+    /*fs.writeFileSync(
       path.join(themeLayoutsPath, themeXmlObject._attributes.themeTypeId + '.json'),
       JSON.stringify(layoutsXml, null, 2)
-    )
+    )*/
   }
 }
 

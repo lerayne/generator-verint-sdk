@@ -1,8 +1,5 @@
 const fs = require('fs')
 const { js2xml, xml2js } = require('xml-js')
-const { ifCreatePath } = require('./filesystem')
-const path = require('path')
-const { base64ToBinary } = require('./utils')
 
 function getXMLContents (filePath) {
   const xmlFile = fs.readFileSync(filePath, { encoding: 'utf8' })
@@ -60,7 +57,8 @@ async function writeNewThemeXML (themeXmlObject, filePath) {
     compact: true,
     spaces: 2,
     indentCdata: true,
-    indentAttributes: true
+    indentAttributes: true,
+    attributeValueFn: value => value.replace(/&(?!amp;)/gui, '&amp;')
   })
 
   return fs.promises.writeFile(filePath, xml)
