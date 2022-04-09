@@ -1,5 +1,7 @@
-const Generator = require('yeoman-generator')
+// eslint-disable-next-line import/no-unused-modules
 const fs = require('fs')
+
+const Generator = require('yeoman-generator')
 const execa = require('execa')
 
 module.exports = class BaseGenerator extends Generator {
@@ -8,15 +10,15 @@ module.exports = class BaseGenerator extends Generator {
     this._getXmlFilesChoices = this._getXmlFilesChoices.bind(this)
   }
 
-  _sayHello(){
+  _sayHello () {
     const packageJson = JSON.parse(fs.readFileSync(this.templatePath('../../../package.json')))
-    this.log('HELLO! You are using generator-verint-sdk v' + packageJson.version)
+    this.log(`HELLO! You are using generator-verint-sdk v${packageJson.version}`)
   }
 
-  _verifyEnvironment() {
-    let nodeVersion = execa.commandSync('node --version')
-    let npmVersion = execa.commandSync('npm --version')
-    let gitUser = execa.commandSync('git config --get user.name')
+  _verifyEnvironment () {
+    const nodeVersion = execa.commandSync('node --version')
+    const npmVersion = execa.commandSync('npm --version')
+    const gitUser = execa.commandSync('git config --get user.name')
 
     if (nodeVersion.stderr || npmVersion.stderr || gitUser.stderr) {
       this.log.error('Either node.js, NPM or git is not installed')
@@ -43,17 +45,17 @@ module.exports = class BaseGenerator extends Generator {
    * @private
    */
   _getXmlFilesChoices () {
-    //read root folder
+    // read root folder
     let files = fs.readdirSync(this.destinationPath())
 
-    //if exists - read "import" folder
+    // if exists - read "import" folder
     if (fs.existsSync(this.destinationPath('import'))) {
       const files2 = fs.readdirSync(this.destinationPath('import'))
-      files = files.concat(files2.map(fName => 'import/' + fName))
+      files = files.concat(files2.map(fName => `import/${fName}`))
     }
 
-    //find xml files
-    const xmls = files.filter(fName => fName.match(/\.xml$/i))
+    // find xml files
+    const xmls = files.filter(fName => fName.match(/\.xml$/ui))
 
     if (!xmls.length) {
       this.log.error('XML files not found. It should be in root or "import" directory')
@@ -64,7 +66,9 @@ module.exports = class BaseGenerator extends Generator {
   }
 
   _copyFiles (fromFolder, toFolder, files) {
+    // eslint-disable-next-line no-param-reassign
     if (fromFolder) fromFolder += '/'
+    // eslint-disable-next-line no-param-reassign
     if (toFolder) toFolder += '/'
 
     files.forEach(file => {
@@ -76,7 +80,9 @@ module.exports = class BaseGenerator extends Generator {
   }
 
   _copyWithRename (fromFolder, toFolder, namePairs) {
+    // eslint-disable-next-line no-param-reassign
     if (fromFolder) fromFolder += '/'
+    // eslint-disable-next-line no-param-reassign
     if (toFolder) toFolder += '/'
 
     namePairs.forEach(pair => {

@@ -1,15 +1,17 @@
+/* global WIDGET_SAFE_NAME */
 import deepExtend from 'deep-extend'
 
-const jsonCopy = function (obj) {
+function jsonCopy (obj) {
   if (typeof obj !== 'object') return null
   try {
     return JSON.parse(JSON.stringify(obj))
   } catch (error) {
     console.error('Warning! Argument is not a valid JSON. Details:', error)
+    return null
   }
 }
 
-const isEmpty = function (obj) {
+function isEmpty (obj) {
   if (typeof obj !== 'object') return null
   return Object.keys(obj).length === 0
 }
@@ -22,6 +24,7 @@ const isEmpty = function (obj) {
  * @param converters
  * @returns {Promise<object>}
  */
+// eslint-disable-next-line default-param-last
 async function convertSchema (currentConfig = {}, defaultConfig, converters) {
   // To understand whether or not we have to up/downgrade the config schema we first need to
   // get current and desired schema revision. Thing is, if config was saved prior to
@@ -40,28 +43,28 @@ async function convertSchema (currentConfig = {}, defaultConfig, converters) {
     targetRevision = defaultConfig.meta.revision
   }
 
-  //Step 3: determine type of conversion (none, upgrade or downgrade)
+  // Step 3: determine type of conversion (none, upgrade or downgrade)
   let type // possible values: 'up' | 'down'
 
   if (currentRevision === targetRevision) {
-    console.log(WIDGET_SAFE_NAME + ': same schema revisions, no need to convert')
+    console.log(`${WIDGET_SAFE_NAME}: same schema revisions, no need to convert`)
     return currentConfig
   }
 
   // if converters are empty - nothing to convert
   if (!converters || !converters.length) {
-    console.warn(WIDGET_SAFE_NAME + ': schema revisions don\'t match, but no converters defined. Skipping conversion')
+    console.warn(`${WIDGET_SAFE_NAME}: schema revisions don't match, but no converters defined. Skipping conversion`)
     return currentConfig
   }
 
   if (targetRevision > currentRevision) {
     type = 'up'
-    console.info(WIDGET_SAFE_NAME + ': upgrading schema from', currentRevision, 'to', targetRevision)
+    console.info(`${WIDGET_SAFE_NAME}: upgrading schema from`, currentRevision, 'to', targetRevision)
   }
 
   if (targetRevision < currentRevision) {
     type = 'down'
-    console.info(WIDGET_SAFE_NAME + ': downgrading from', currentRevision, 'to', targetRevision)
+    console.info(`${WIDGET_SAFE_NAME}: downgrading from`, currentRevision, 'to', targetRevision)
   }
 
   // Step 4: queueing the converters
@@ -72,7 +75,7 @@ async function convertSchema (currentConfig = {}, defaultConfig, converters) {
       if (converters[i] && converters[i].upgradeTo) {
         queue.push(converters[i].upgradeTo)
       } else {
-        console.warn(WIDGET_SAFE_NAME + ': no converter, or no "upgradeTo" scenario was found for the specified revision ' + i + '. Skipping conversion')
+        console.warn(`${WIDGET_SAFE_NAME}: no converter, or no "upgradeTo" scenario was found for the specified revision ${i}. Skipping conversion`)
         return currentConfig
       }
     }
@@ -83,27 +86,27 @@ async function convertSchema (currentConfig = {}, defaultConfig, converters) {
       if (converters[i] && converters[i].downgradeFrom) {
         queue.push(converters[i].downgradeFrom)
       } else {
-        console.warn(WIDGET_SAFE_NAME + ': no converter, or no "downgradeFrom" scenario was found for the specified revision ' + i + '. Skipping conversion')
+        console.warn(`${WIDGET_SAFE_NAME}: no converter, or no "downgradeFrom" scenario was found for the specified revision ${i}. Skipping conversion`)
         return currentConfig
       }
     }
   }
 
   if (queue.length === 0) {
-    console.warn(WIDGET_SAFE_NAME + ': schema revisions don\'t match, but no converters queued. Skipping conversion')
+    console.warn(`${WIDGET_SAFE_NAME}: schema revisions don't match, but no converters queued. Skipping conversion`)
     return currentConfig
+  }
+
+  if (queue.some(converter => typeof converter !== 'function')) {
+    throw new Error('Converter should be a function')
   }
 
   let targetConfig = jsonCopy(currentConfig)
 
   // Step 5: step by step conversion
-  for (let j = 0; j < queue.length; j++) {
-    const converter = queue[j]
 
-    if (typeof converter !== 'function') {
-      throw new Error('Converter should be a function')
-    }
-
+  for (const converter of queue) {
+    // eslint-disable-next-line no-await-in-loop
     targetConfig = await converter(targetConfig)
   }
 
@@ -132,10 +135,10 @@ async function prepareConfig (currentConfig = {}, defaultConfig, converters) {
   // there is no saved config at all. In this case - just return defaults
   if (!currentConfig || isEmpty(currentConfig)) return jsonCopy(defaultConfig)
 
-  //convert schema
+  // convert schema
   let targetConfig = await convertSchema(currentConfig, defaultConfig, converters)
 
-  //extending changes that don't need converters
+  // extending changes that don't need converters
   targetConfig = deepExtend(jsonCopy(defaultConfig), targetConfig)
 
   return targetConfig
@@ -144,5 +147,5 @@ async function prepareConfig (currentConfig = {}, defaultConfig, converters) {
 export {
   jsonCopy,
   isEmpty,
-  prepareConfig
+  prepareConfig,
 }

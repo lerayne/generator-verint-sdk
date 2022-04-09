@@ -1,4 +1,4 @@
-//Verint file structure paths
+// Verint file structure paths
 
 /* THEMES */
 
@@ -8,7 +8,7 @@ const PATH_THEME_DEFINITIONS = 'verint/filestorage/themefiles/d'
 // overwritten
 const PATH_THEME_FILES_FD = 'verint/filestorage/themefiles/fd'
 
-//only exists in non-developer mode site, so most likely we don't need it
+// only exists in non-developer mode site, so most likely we don't need it
 const PATH_THEME_FILES = 'verint/filestorage/themefiles/f'
 
 // path for page layouts
@@ -22,5 +22,5 @@ module.exports = {
   PATH_THEME_FILES_FD,
   PATH_THEME_FILES,
   PATH_WIDGET_FILES,
-  PATH_THEME_LAYOUTS
+  PATH_THEME_LAYOUTS,
 }

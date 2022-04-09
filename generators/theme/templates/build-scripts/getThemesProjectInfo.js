@@ -13,7 +13,7 @@ function getThemeInfo (themeType, xmlFilePath) {
   const {
     id,
     themeTypeId,
-    name
+    name,
   } = _attributes
 
   const newThemeInfo = {
@@ -26,7 +26,7 @@ function getThemeInfo (themeType, xmlFilePath) {
 
   if (styleFiles && styleFiles.file) {
     newThemeInfo.styleFiles = {
-      file: styleFiles.file.length ? styleFiles.file : [styleFiles.file]
+      file: styleFiles.file.length ? styleFiles.file : [styleFiles.file],
     }
   }
 
@@ -35,16 +35,15 @@ function getThemeInfo (themeType, xmlFilePath) {
 
 module.exports = function getThemesProjectInfo () {
   const themeInfo = {
-    site: [],
+    site:  [],
     group: [],
-    blog: []
+    blog:  [],
   }
 
   if (!fs.existsSync(PATH_THEME_DEFINITIONS)) return null
 
-  const themeDefinitionsDirs = fs.readdirSync(PATH_THEME_DEFINITIONS).filter(entryName => {
-    return fs.lstatSync(path.join(PATH_THEME_DEFINITIONS, entryName)).isDirectory()
-  })
+  const themeDefinitionsDirs = fs.readdirSync(PATH_THEME_DEFINITIONS)
+    .filter(entryName => fs.lstatSync(path.join(PATH_THEME_DEFINITIONS, entryName)).isDirectory())
 
   for (const dirName of themeDefinitionsDirs) {
     const subGroup = objectReverse(themeTypeIds)[dirName]

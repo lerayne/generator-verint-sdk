@@ -1,6 +1,6 @@
 import jQuery from 'verint/jquery'
 
-class AbortError extends Error {
+class AbortError extends Error { 
   constructor (message) {
     super(message)
     this.name = 'AbortError'
@@ -19,14 +19,14 @@ export function verintRestRequest (method, url, data, signal) {
     const xhr = jQuery.telligent.evolution[method]({
       url,
       data,
-      success: result => {
+      success: response => {
         signal?.removeEventListener('abort', onAbort)
-        resolve(result)
+        resolve(response)
       },
-      error: xhr => {
+      error: response => {
         signal?.removeEventListener('abort', onAbort)
-        reject(new NetworkError(xhr.status))
-      }
+        reject(new NetworkError(response.status))
+      },
     })
 
     function onAbort () {

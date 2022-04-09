@@ -1,3 +1,4 @@
+// eslint-disable-next-line import/no-unused-modules
 const path = require('path')
 const fs = require('fs')
 
@@ -15,18 +16,20 @@ const packageJson = require('../../package.json')
 * If external (import/export) XML with many widgets in one file is needed - it is created
 * afterwards using file structure created by this one
 * */
-exports.buildInternalXml = async function buildInternalXml () {
+exports.buildInternalXml = function buildInternalXml () {
   try {
-    //getting all metadata for every widget in the current /verint/filestorage/defaultwidgets
+    // getting all metadata for every widget in the current /verint/filestorage/defaultwidgets
     const WIDGETS = getProjectInfo('defaultwidgets')
 
     console.log('WIDGETS', JSON.stringify(WIDGETS))
 
-    //checking access of each widget file
-    WIDGETS.forEach(widget => fs.accessSync(path.join(widget.widgetsFolder, widget.xmlFileName)))
+    // checking access of each widget file
+    for (const widget of WIDGETS) {
+      fs.accessSync(path.join(widget.widgetsFolder, widget.xmlFileName))
+    }
 
     const xmlFilesToWrite = WIDGETS.map(widget => {
-      //read statics files
+      // read statics files
       const staticsPath = path.join('src', widget.safeName, 'statics')
       const staticsFileList = fs.readdirSync(staticsPath)
 
@@ -35,10 +38,10 @@ exports.buildInternalXml = async function buildInternalXml () {
         _attributes: {
           ...widget.xmlMeta,
           lastModified: getLastModified(),
-          description: getNewDescription(
+          description:  getNewDescription(
             widget.xmlMeta.description,
             packageJson.version
-          )
+          ),
         },
       }
 
@@ -55,13 +58,14 @@ exports.buildInternalXml = async function buildInternalXml () {
       // just in case a widget's config has requiredContext field
       if (widget.requiredContext) widgetXmlObject.requiredContext = widget.requiredContext
 
-      //create promise to return an array of promises
+      // create promise to return an array of promises
       return writeNewWidgetXML(widgetXmlObject, path.join(widget.widgetsFolder, widget.xmlFileName))
     })
 
     return Promise.all(xmlFilesToWrite)
-  } catch (err) {
-    console.error(err)
+  } catch (ex) {
+    console.error(ex)
+    throw ex
   }
 }
 
@@ -71,24 +75,26 @@ exports.buildInternalXml = async function buildInternalXml () {
  *
  * @returns {Promise<void>}
  */
-exports.buildBundleXml = async function buildBundleXml () {
+exports.buildBundleXml = function buildBundleXml () {
   try {
-    //getting all data for every widget in the current config
+    // getting all data for every widget in the current config
     const WIDGETS = getProjectInfo('defaultwidgets')
 
     console.log('WIDGETS', JSON.stringify(WIDGETS))
 
-    //checking access of each widget file
-    WIDGETS.forEach(widget => fs.accessSync(path.join(widget.widgetsFolder, widget.xmlFileName)))
+    // checking access of each widget file
+    for (const widget of WIDGETS) {
+      fs.accessSync(path.join(widget.widgetsFolder, widget.xmlFileName))
+    }
 
-    //this is template for future XML structure
+    // this is template for future XML structure
     const bundleXMLObject = WIDGETS.map(widget => {
-      //read current xml
+      // read current xml
       const [mainSection] = getXmlWidgets(path.join(widget.widgetsFolder, widget.xmlFileName))
       const attachmentsPath = path.join(widget.widgetsFolder, widget.folderInstanceId)
       let widgetFiles = []
 
-      //collect files base64 data for new XML
+      // collect files base64 data for new XML
       if (fs.existsSync(attachmentsPath)) {
         const filesList = fs.readdirSync(attachmentsPath)
 
@@ -98,13 +104,13 @@ exports.buildBundleXml = async function buildBundleXml () {
 
             return {
               _attributes: { name: fileName },
-              _text: binaryToBase64(fileContents)
+              _text:       binaryToBase64(fileContents),
             }
           })
         }
       }
 
-      //copy static files directly from original XML
+      // copy static files directly from original XML
       const staticFiles = {}
       Object.keys(mainSection).forEach(recordName => {
         if (!['_attributes', 'files', 'requiredContext'].includes(recordName)) {
@@ -116,7 +122,7 @@ exports.buildBundleXml = async function buildBundleXml () {
       const newXMLObject = {
         _attributes: { ...widget.xmlMeta, lastModified: getLastModified() },
         ...staticFiles,
-        files: widgetFiles.length ? { file: widgetFiles } : null
+        files:       widgetFiles.length ? { file: widgetFiles } : null,
       }
 
       if (mainSection.requiredContext) {
@@ -129,11 +135,11 @@ exports.buildBundleXml = async function buildBundleXml () {
     // ensure distrib directory
     const distribDir = ifCreatePath('distrib')
 
-    const xmlFileName =
-      `${packageJson.name.toLowerCase().replace(/\s/gmi, '-')}-${packageJson.version}.xml`
+    const xmlFileName = `${packageJson.name.toLowerCase().replace(/\s/gumi, '-')}-${packageJson.version}.xml`
 
     return writeNewWidgetXML(bundleXMLObject, path.join(distribDir, xmlFileName))
-  } catch (err) {
-    console.error(err)
+  } catch (ex) {
+    console.error(ex)
+    throw ex
   }
 }

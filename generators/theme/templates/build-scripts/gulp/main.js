@@ -1,20 +1,22 @@
 const path = require('path')
 const fs = require('fs')
+
 const { xml2js } = require('xml-js')
 const inquirer = require('inquirer')
+
 const getThemesProjectInfo = require('../getThemesProjectInfo')
 const {
   getLastModified,
   objectReverse,
   binaryToBase64,
   widgetSafeName,
-  getNewDescription
+  getNewDescription,
 } = require('../utils')
 const { themeStaticFiles, themeTypeIds, themeTypeFolders } = require('../constants/global')
 const {
   PATH_THEME_DEFINITIONS,
   PATH_THEME_FILES_FD,
-  PATH_THEME_LAYOUTS
+  PATH_THEME_LAYOUTS,
 } = require('../constants/paths')
 const { writeNewThemeXML, getXmlTheme } = require('../xml')
 const { ifCreatePath } = require('../filesystem')
@@ -36,19 +38,19 @@ exports.buildInternalXmls = async function buildInternalXmls () {
     for (const [themeType, themesOfType] of Object.entries(THEMES)) {
       for (const themeConfig of themesOfType) {
 
-        //theme basic props
+        // theme basic props
         const newInternalXml = {
           _attributes: {
             ...themeConfig._attributes,
             lastModified: getLastModified(),
-            description: getNewDescription(
+            description:  getNewDescription(
               themeConfig._attributes.description,
               packageJson.version
-            )
-          }
+            ),
+          },
         }
 
-        //read statics to write them into new XML
+        // read statics to write them into new XML
         const staticsPath = path.join('src', 'statics', themeConfig.themeType, themeConfig.id)
 
         const staticFiles = fs.readdirSync(staticsPath)
@@ -57,7 +59,7 @@ exports.buildInternalXmls = async function buildInternalXmls () {
         for (const fileName of staticFiles) {
           const recordName = objectReverse(themeStaticFiles)[fileName]
           newInternalXml[recordName] = {
-            _cdata: fs.readFileSync(path.join(staticsPath, fileName)).toString()
+            _cdata: fs.readFileSync(path.join(staticsPath, fileName)).toString(),
           }
         }
 
@@ -69,7 +71,7 @@ exports.buildInternalXmls = async function buildInternalXmls () {
         const themeDefinitionPath = path.join(
           PATH_THEME_DEFINITIONS,
           themeTypeIds[themeType],
-          themeConfig._attributes.id + '.xml'
+          `${themeConfig._attributes.id}.xml`
         )
 
         promises.push(writeNewThemeXML(newInternalXml, themeDefinitionPath))
@@ -82,11 +84,11 @@ exports.buildInternalXmls = async function buildInternalXmls () {
 
 const defaultFileProps = {
   applyToAuthorizationRequests: false,
-  applyToModals: false,
-  applyToNonModals: true,
-  internetExplorerMaxVersion: '',
-  isRightToLeft: '',
-  mediaQuery: ''
+  applyToModals:                false,
+  applyToNonModals:             true,
+  internetExplorerMaxVersion:   '',
+  isRightToLeft:                '',
+  mediaQuery:                   '',
 }
 
 function getStyleFileProps (styleFileRecords, fileName) {
@@ -121,13 +123,13 @@ function readThemeAttachments (themeConfig, themeType, subPath, xmlRecordName) {
 
         const newFileRecord = {
           _attributes: { name: fileName },
-          _cdata: binaryToBase64(fileContents)
+          _cdata:      binaryToBase64(fileContents),
         }
 
         if (xmlRecordName === 'styleFiles') {
           newFileRecord._attributes = {
             ...newFileRecord._attributes,
-            ...getStyleFileProps(themeConfig.styleFiles, fileName)
+            ...getStyleFileProps(themeConfig.styleFiles, fileName),
           }
         }
 
@@ -145,7 +147,7 @@ function readThemeLayouts (themeConfig) {
   const layoutsPath = path.join(
     PATH_THEME_LAYOUTS,
     themeConfig._attributes.id,
-    themeConfig._attributes.themeTypeId + '.xml'
+    `${themeConfig._attributes.themeTypeId}.xml`
   )
 
   if (fs.existsSync(layoutsPath)) {
@@ -184,7 +186,7 @@ function readThemePreview (themeConfig, themeType) {
 
     objectPart.previewImage = {
       _attributes: { name: filesList[0] },
-      _cdata: binaryToBase64(fs.readFileSync(path.join(previewPath, filesList[0])))
+      _cdata:      binaryToBase64(fs.readFileSync(path.join(previewPath, filesList[0]))),
     }
   }
 
@@ -215,7 +217,7 @@ exports.buildBundleXmls = async function buildBundleXmls () {
         const layoutsPath = path.join(
           PATH_THEME_LAYOUTS,
           themeConfig._attributes.id,
-          themeConfig._attributes.themeTypeId + '.xml'
+          `${themeConfig._attributes.themeTypeId}.xml`
         )
 
         if (fs.existsSync(layoutsPath)) {
@@ -227,27 +229,27 @@ exports.buildBundleXmls = async function buildBundleXmls () {
     // adding questions
     if (pageLayoutsFound) {
       questions.push({
-        type: 'confirm',
-        name: 'includeLayouts',
-        message: 'Do you want to include page layouts into bundle?',
-        default: true
+        'type':    'confirm',
+        'name':    'includeLayouts',
+        'message': 'Do you want to include page layouts into bundle?',
+        'default': true,
       })
     }
 
-    //inquiring
+    // inquiring
     if (questions.length) {
       answers = await inquirer.prompt(questions)
     }
 
-    //writing bundle XMLs
+    // writing bundle XMLs
     for (const [themeType, themesOfType] of Object.entries(THEMES)) {
       for (const themeConfig of themesOfType) {
 
-        //read current theme XML definition
+        // read current theme XML definition
         let themeObjectXml = getXmlTheme(path.join(
           PATH_THEME_DEFINITIONS,
           themeTypeIds[themeType],
-          themeConfig.id + '.xml'
+          `${themeConfig.id}.xml`
         ))
 
         // add preview and attachments
@@ -262,7 +264,7 @@ exports.buildBundleXmls = async function buildBundleXmls () {
         if (answers.includeLayouts) {
           themeObjectXml = {
             ...themeObjectXml,
-            ...readThemeLayouts(themeConfig)
+            ...readThemeLayouts(themeConfig),
           }
         }
 

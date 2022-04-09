@@ -1,1 +1,1 @@
-export default from './WidgetConfigPanel'
+export { default } from './WidgetConfigPanel'

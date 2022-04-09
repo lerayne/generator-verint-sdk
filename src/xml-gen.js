@@ -1,13 +1,16 @@
+// eslint-disable-next-line import/no-unused-modules,import/unambiguous
 const fs = require('fs')
 const path = require('path')
+
+const { js2xml } = require('xml-js')
+
 const { ifCreatePath } = require('./filesystem')
 const { base64ToBinary } = require('./utils')
-const { js2xml } = require('xml-js')
 
 function getFileExtension (fileRecord, defaultExt = '') {
   const extensionMapping = {
-    'Velocity': '.vm',
-    'JavaScript': '.js'
+    Velocity:   '.vm',
+    JavaScript: '.js',
   }
 
   if (
@@ -26,7 +29,7 @@ function writeAttachments (xmlObject, fieldName, destinationPath, destinationSub
     const recordData = xmlObject[recordName]
 
     if (recordName === fieldName && recordData.file) {
-      //single entry is not parsed as array, so we make it an array
+      // single entry is not parsed as array, so we make it an array
       if (typeof recordData.file.length === 'undefined') recordData.file = [recordData.file]
 
       for (const file of recordData.file) {
@@ -54,6 +57,7 @@ function writeStatics (xmlObject, staticsPath, staticFilesList = {}) {
 
       fs.writeFileSync(
         path.join(staticsPath, fileName),
+        // eslint-disable-next-line no-nested-ternary
         recordData._cdata
           ? recordData._cdata.trim()
           : (recordData._text ? recordData._text.trim() : '')
@@ -74,31 +78,31 @@ function writeThemePreview (themeXmlObject, themeFilesPath) {
 
 function writePageLayouts (themeXmlObject, themeLayoutsPath) {
   if (themeXmlObject.pageLayouts) {
-
     const layoutsXml = {
       theme: {
-        _attributes: { name: themeXmlObject._attributes.id },
-        defaultHeaders: themeXmlObject.pageLayouts.headers,
-        defaultFooters: themeXmlObject.pageLayouts.footers,
-        defaultFragmentPages: themeXmlObject.pageLayouts.pages
-      }
+        _attributes:          { name: themeXmlObject._attributes.id },
+        defaultHeaders:       themeXmlObject.pageLayouts.headers,
+        defaultFooters:       themeXmlObject.pageLayouts.footers,
+        defaultFragmentPages: themeXmlObject.pageLayouts.pages,
+      },
     }
 
     fs.writeFileSync(
-      path.join(themeLayoutsPath, themeXmlObject._attributes.themeTypeId + '.xml'),
+      path.join(themeLayoutsPath, `${themeXmlObject._attributes.themeTypeId}.xml`),
       js2xml(layoutsXml, {
-        compact: true,
-        spaces: 2,
-        indentCdata: true,
+        compact:          true,
+        // eslint-disable-next-line no-magic-numbers
+        spaces:           2,
+        indentCdata:      true,
         indentAttributes: true,
-        attributeValueFn: value => value.replace(/&(?!amp;)/gui, '&amp;')
+        attributeValueFn: value => value.replace(/&(?!amp;)/gui, '&amp;'),
       })
     )
 
-    /*fs.writeFileSync(
+    /* fs.writeFileSync(
       path.join(themeLayoutsPath, themeXmlObject._attributes.themeTypeId + '.json'),
       JSON.stringify(layoutsXml, null, 2)
-    )*/
+    ) */
   }
 }
 
@@ -106,5 +110,5 @@ module.exports = {
   writeAttachments,
   writeStatics,
   writeThemePreview,
-  writePageLayouts
+  writePageLayouts,
 }

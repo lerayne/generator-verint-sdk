@@ -1,8 +1,14 @@
 import React, { useContext, useState } from 'react'
-import { useSetState } from 'react-use'
-import css from './WidgetConfigPanel.scss'
+import PT                              from 'prop-types'
+import { useSetState }                 from 'react-use'
 
 import { ConfigContext } from '../../constants/ConfigContext'
+
+import css from './WidgetConfigPanel.scss'
+
+WidgetConfigPanel.propTypes = {
+  onSave: PT.func.isRequired,
+}
 
 export default function WidgetConfigPanel ({ onSave }) {
   const { config: initialConfig, originUrl, lang } = useContext(ConfigContext)
@@ -10,7 +16,7 @@ export default function WidgetConfigPanel ({ onSave }) {
   const [validationError, setValidationError] = useState('')
 
   function validateAll (state = configState) {
-    //validate channelId
+    // validate channelId
     if (!state.testTextField) {
       setValidationError('Text is required')
       return false
@@ -30,6 +36,7 @@ export default function WidgetConfigPanel ({ onSave }) {
 
       <div className='footer'>
         <button
+          type='button'
           className='save-button'
           disabled={validationError}
           onClick={() => {
@@ -38,7 +45,8 @@ export default function WidgetConfigPanel ({ onSave }) {
               onSave(configState)
             }
           }}
-        >save
+        >
+          save
         </button>
       </div>
     </div>

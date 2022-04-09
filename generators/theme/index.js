@@ -1,17 +1,23 @@
 const path = require('path')
-const execa = require('execa')
 const fs = require('fs')
+
+const execa = require('execa')
+
 const BaseGenerator = require('../../src/BaseGenerator')
 const { getXmlTheme, writeNewThemeXML } = require('../../src/xml')
 const {
   writeAttachments,
   writeStatics,
   writeThemePreview,
-  writePageLayouts
+  writePageLayouts,
 } = require('../../src/xml-gen')
 const { ifCreatePath } = require('../../src/filesystem')
 const { themeTypeIds, themeTypeFolders, themeStaticFiles } = require('../../src/constants/global')
-const { PATH_THEME_DEFINITIONS, PATH_THEME_FILES_FD, PATH_THEME_LAYOUTS } = require('../../src/constants/paths')
+const {
+  PATH_THEME_DEFINITIONS,
+  PATH_THEME_FILES_FD,
+  PATH_THEME_LAYOUTS,
+} = require('../../src/constants/paths') 
 const validateProjectName = require('../../src/validators/validateProjectName')
 const validateEmail = require('../../src/validators/validateEmail')
 
@@ -21,8 +27,8 @@ module.exports = class VerintTheme extends BaseGenerator {
     this._verifyEnvironment()
 
     this.inputData = {
-      themeConfig: [],
-      existingPackageJson: this._getExistingPackageJson()
+      themeConfig:         [],
+      existingPackageJson: this._getExistingPackageJson(),
     }
   }
 
@@ -41,86 +47,86 @@ module.exports = class VerintTheme extends BaseGenerator {
     this.answers = await this.prompt([
       // Selection of scenario
       {
-        type: 'list',
-        name: 'mode',
-        message: 'Is it a new widget or a conversion of an existing one?',
-        choices: [
+        'type':    'list',
+        'name':    'mode',
+        'message': 'Is it a new widget or a conversion of an existing one?',
+        'choices': [
           {
-            name: 'Create a new theme project using existing XML',
-            value: 'new-xml',
-            disabled: scaffolded
+            name:     'Create a new theme project using existing XML',
+            value:    'new-xml',
+            disabled: scaffolded,
           }, {
-            name: 'Add a theme to the project using existing XML',
+            name:  'Add a theme to the project using existing XML',
             value: 'add-xml',
           },
         ],
-        default: 'new-xml'
+        'default': 'new-xml',
       },
 
       // Selection of XML file
       {
-        type: 'list',
-        name: 'filePath',
+        type:    'list',
+        name:    'filePath',
         message: 'Select an XML file',
         choices: this._getXmlFilesChoices,
       },
 
       {
-        type: 'list',
-        name: 'themeType',
+        type:    'list',
+        name:    'themeType',
         message: 'Select the theme type',
         choices: [
           { name: 'Site', value: 'site' },
           { name: 'Group', value: 'group' },
-          { name: 'Blog', value: 'blog' }
-        ]
+          { name: 'Blog', value: 'blog' },
+        ],
       },
 
       {
-        type: 'input',
-        name: 'projectName',
-        message: 'Enter project name',
-        validate: validateProjectName.bind(this),
-        default: folderName,
-        when: answers => ['new-xml'].includes(answers.mode),
+        'type':     'input',
+        'name':     'projectName',
+        'message':  'Enter project name',
+        'validate': validateProjectName.bind(this),
+        'default':  folderName,
+        'when':     answers => ['new-xml'].includes(answers.mode),
       },
 
       // TODO: add validators to the rest of input options
       // Author name for package.json
       {
-        type: 'input',
-        name: 'userName',
-        message: 'Project author name',
-        default: userName.stdout,
-        when: answers => ['new-xml'].includes(answers.mode),
+        'type':    'input',
+        'name':    'userName',
+        'message': 'Project author name',
+        'default': userName.stdout,
+        'when':    answers => ['new-xml'].includes(answers.mode),
       },
 
       // Author email for package.json
       {
-        type: 'input',
-        name: 'userEmail',
-        message: 'Project author email',
-        default: userEmail.stdout,
-        validate: validateEmail.bind(this),
-        when: answers => ['new-xml'].includes(answers.mode),
+        'type':     'input',
+        'name':     'userEmail',
+        'message':  'Project author email',
+        'default':  userEmail.stdout,
+        'validate': validateEmail.bind(this),
+        'when':     answers => ['new-xml'].includes(answers.mode),
       },
     ])
   }
 
-  async configuring () {
+  configuring () {
     const { filePath, mode, projectName, userName, userEmail } = this.answers
 
-    //only on "new" or "convert"
+    // only on "new" or "convert"
     if (['new-xml'].includes(mode)) {
       // reading template of package.json
       const packageJson = JSON.parse(fs.readFileSync(this.templatePath('package.json')))
 
       this.packageJson.merge(packageJson)
 
-      //adding data to package.json
+      // adding data to package.json
       this.packageJson.merge({
-        name: projectName,
-        author: `${userName} <${userEmail}>`
+        name:   projectName,
+        author: `${userName} <${userEmail}>`,
       })
     }
 
@@ -175,7 +181,7 @@ module.exports = class VerintTheme extends BaseGenerator {
       )
     }
 
-    await this._processThemeDefinition(
+    await VerintTheme._processThemeDefinition(
       themeConfig,
       themeXmlPath,
       themeFilesPath,
@@ -186,7 +192,7 @@ module.exports = class VerintTheme extends BaseGenerator {
     return null
   }
 
-  async _processThemeDefinition (
+  static async _processThemeDefinition (
     themeXmlObject,
     themeXmlPath,
     themeFilesPath,
@@ -195,25 +201,25 @@ module.exports = class VerintTheme extends BaseGenerator {
   ) {
     const { _attributes } = themeXmlObject
 
-    //create "clean" XML w/o attachments for Verint's FS
+    // create "clean" XML w/o attachments for Verint's FS
     const widgetXmlObjectInternal = {}
 
     const internalRecords = [...Object.keys(themeStaticFiles), '_attributes']
 
     for (const [recordName, recordValue] of Object.entries(themeXmlObject)) {
-      //copy static files
+      // copy static files
       if (internalRecords.includes(recordName)) {
         widgetXmlObjectInternal[recordName] = recordValue
       }
 
-      //separate processing of styleFiles, because they have options that need to be saved
+      // separate processing of styleFiles, because they have options that need to be saved
       if (recordName === 'styleFiles' && recordValue.file) {
         const styleFiles = (recordValue.file.length) ? recordValue.file : [recordValue.file]
         widgetXmlObjectInternal.styleFiles = {
           file: styleFiles.map(file => {
             const { _cdata, ...rest } = file
             return rest
-          })
+          }),
         }
       }
     }
@@ -227,7 +233,7 @@ module.exports = class VerintTheme extends BaseGenerator {
 
     writeStatics(themeXmlObject, themeStaticsPath, themeStaticFiles)
 
-    //write preview image
+    // write preview image
     writeThemePreview(themeXmlObject, themeFilesPath)
 
     writePageLayouts(themeXmlObject, themeLayoutsPath)

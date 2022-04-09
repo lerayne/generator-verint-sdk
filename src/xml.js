@@ -1,4 +1,6 @@
+// eslint-disable-next-line import/no-unused-modules,import/unambiguous
 const fs = require('fs')
+
 const { js2xml, xml2js } = require('xml-js')
 
 function getXMLContents (filePath) {
@@ -33,32 +35,34 @@ function getXmlTheme (filePath) {
  * @param filePath
  * @returns {Promise<void>}
  */
-async function writeNewWidgetXML (widgetXmlObjects, filePath) {
+function writeNewWidgetXML (widgetXmlObjects, filePath) {
   const widgetObject = {
     scriptedContentFragments: {
-      scriptedContentFragment: widgetXmlObjects
-    }
+      scriptedContentFragment: widgetXmlObjects,
+    },
   }
 
   const xml = js2xml(widgetObject, {
-    compact: true,
-    spaces: 2,
-    indentCdata: true,
-    indentAttributes: true
+    compact:          true,
+    // eslint-disable-next-line no-magic-numbers
+    spaces:           2,
+    indentCdata:      true,
+    indentAttributes: true,
   })
 
   return fs.promises.writeFile(filePath, xml)
 }
 
-async function writeNewThemeXML (themeXmlObject, filePath) {
+function writeNewThemeXML (themeXmlObject, filePath) {
   const xml = js2xml({
-    theme: themeXmlObject
+    theme: themeXmlObject,
   }, {
-    compact: true,
-    spaces: 2,
-    indentCdata: true,
+    compact:          true,
+    // eslint-disable-next-line no-magic-numbers
+    spaces:           2,
+    indentCdata:      true,
     indentAttributes: true,
-    attributeValueFn: value => value.replace(/&(?!amp;)/gui, '&amp;')
+    attributeValueFn: value => value.replace(/&(?!amp;)/gui, '&amp;'),
   })
 
   return fs.promises.writeFile(filePath, xml)
@@ -92,9 +96,9 @@ function createStaticFileObjectPart (fileName, fileContents) {
 
   return {
     [xmlEntryName]: {
-      _attributes: language ? { 'language': language } : null,
-      _cdata: fileContents
-    }
+      _attributes: language ? { language } : null,
+      _cdata:      fileContents,
+    },
   }
 }
 
