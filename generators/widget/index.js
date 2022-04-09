@@ -327,6 +327,7 @@ module.exports = class VerintWidget extends BaseGenerator {
         [(framework === 'react' ? 'gulpfile-react.js' : 'gulpfile.js'), 'gulpfile.js'],
         ['nvmrc-template', '.nvmrc'],
         ['npmrc-template', '.npmrc'],
+        ['eslintrc-template', '.eslintrc'],
         ['gitignore-template', '.gitignore'],
       ])
 

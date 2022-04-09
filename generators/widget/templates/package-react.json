@@ -14,9 +14,6 @@
     "node": ">= 16.14.2",
     "npm": ">= 8.5.0"
   },
-  "standard": {
-    "parser": "babel-eslint"
-  },
   "keywords": [
     "verint",
     "telligent",
@@ -39,19 +36,10 @@
     "@babel/preset-env": "7.14.1",
     "@babel/preset-react": "7.13.13",
     "autoprefixer": "10.2.5",
-    "babel-eslint": "10.1.0",
     "babel-loader": "8.2.2",
     "core-js": "3.11.3",
     "css-loader": "5.2.4",
-    "eslint": "7.28.0",
-    "eslint-config-standard": "16.0.3",
-    "eslint-config-standard-jsx": "10.0.0",
-    "eslint-plugin-import": "2.23.4",
-    "eslint-plugin-node": "11.1.0",
-    "eslint-plugin-promise": "5.1.0",
-    "eslint-plugin-react": "7.24.0",
-    "eslint-plugin-react-hooks": "4.2.0",
-    "eslint-plugin-standard": "5.0.0",
+    "eslint-config-anrom": "0.3.0",
     "file-loader": "6.2.0",
     "gulp": "4.0.2",
     "gulp-ejs": "5.1.0",

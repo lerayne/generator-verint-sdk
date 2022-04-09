@@ -142,6 +142,7 @@ module.exports = class VerintTheme extends BaseGenerator {
         ['gulpfile.js', 'gulpfile.js'],
         ['nvmrc-template', '.nvmrc'],
         ['npmrc-template', '.npmrc'],
+        ['eslintrc-template', '.eslintrc'],
         ['gitignore-template', '.gitignore'],
       ])
 
