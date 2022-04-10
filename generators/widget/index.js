@@ -15,6 +15,7 @@ const { widgetSafeName, getLastModified } = require('../../src/utils')
 
 const validateProjectName = require('../../src/validators/validateProjectName')
 const validateEmail = require('../../src/validators/validateEmail')
+const { widgetStaticFiles } = require('../../src/constants/global')
 
 module.exports = class VerintWidget extends BaseGenerator {
   initializing () {
@@ -448,7 +449,7 @@ module.exports = class VerintWidget extends BaseGenerator {
 
     const staticPath = ifCreateStaticPath(_attributes)
 
-    writeStatics(widgetXmlObject, staticPath)
+    writeStatics(widgetXmlObject, staticPath, widgetStaticFiles)
 
     return null
   }

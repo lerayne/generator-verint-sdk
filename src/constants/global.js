@@ -19,8 +19,17 @@ const themeStaticFiles = {
   languageResources: 'languageResources.xml',
 }
 
+const widgetStaticFiles = {
+  additionalCssScript: 'additionalCssScript.vm',
+  configuration:       'configuration.xml',
+  contentScript:       'contentScript.vm',
+  headerScript:        'headerScript.vm',
+  languageResources:   'languageResources.xml',
+}
+
 module.exports = {
   themeTypeIds,
   themeTypeFolders,
   themeStaticFiles,
+  widgetStaticFiles,
 }
