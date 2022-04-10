@@ -1,3 +1,4 @@
+// eslint-disable-next-line import/no-unused-modules
 const path = require('path')
 const fs = require('fs')
 
@@ -8,12 +9,12 @@ const { getXmlTheme } = require('./xml')
 
 function getThemeInfo (themeType, xmlFilePath) {
   const themeXml = getXmlTheme(xmlFilePath)
-  const { _attributes, styleFiles } = themeXml
+  const { _attributes, styleFiles, scopedProperties } = themeXml
 
   const {
     id,
     themeTypeId,
-    name,
+    name, 
   } = _attributes
 
   const newThemeInfo = {
@@ -28,6 +29,10 @@ function getThemeInfo (themeType, xmlFilePath) {
     newThemeInfo.styleFiles = {
       file: styleFiles.file.length ? styleFiles.file : [styleFiles.file],
     }
+  }
+
+  if (scopedProperties) {
+    newThemeInfo.scopedProperties = scopedProperties
   }
 
   return newThemeInfo
@@ -46,13 +51,13 @@ module.exports = function getThemesProjectInfo () {
     .filter(entryName => fs.lstatSync(path.join(PATH_THEME_DEFINITIONS, entryName)).isDirectory())
 
   for (const dirName of themeDefinitionsDirs) {
-    const subGroup = objectReverse(themeTypeIds)[dirName]
-    if (subGroup) {
-      const subGroupContents = fs.readdirSync(path.join(PATH_THEME_DEFINITIONS, dirName))
-      const subGroupXmls = subGroupContents.filter(entry => entry.match(/^[a-f\d]{32}\.xml$/iu))
+    const themeType = objectReverse(themeTypeIds)[dirName]
+    if (themeType) {
+      const themeTypeContents = fs.readdirSync(path.join(PATH_THEME_DEFINITIONS, dirName))
+      const subGroupXmls = themeTypeContents.filter(entry => entry.match(/^[a-f\d]{32}\.xml$/iu))
 
       for (const themeDefFile of subGroupXmls) {
-        themeInfo[subGroup].push(getThemeInfo(subGroup, path.join(
+        themeInfo[themeType].push(getThemeInfo(themeType, path.join(
           PATH_THEME_DEFINITIONS,
           dirName,
           themeDefFile

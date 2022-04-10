@@ -1,4 +1,4 @@
-// eslint-disable-next-line import/no-unused-modules,import/unambiguous
+// eslint-disable-next-line import/no-unused-modules
 const fs = require('fs')
 
 const { js2xml, xml2js } = require('xml-js')
@@ -62,7 +62,21 @@ function writeNewThemeXML (themeXmlObject, filePath) {
     spaces:           2,
     indentCdata:      true,
     indentAttributes: true,
-    attributeValueFn: value => value.replace(/&(?!amp;)/gui, '&amp;'),
+    attributeValueFn: (value, _name, parent) => {
+      let newValue = value
+        .replace(/&(?!#?[a-zA-Z0-9]+;)/gui, '&amp;')
+        .replace(/</gui, '&lt;')
+        .replace(/>/gui, '&gt;')
+        .replace(/"/gui, '&quot;')
+
+      if (parent === 'scopedProperty') {
+        newValue = newValue
+          .replace(/\r/gui, '&#xD;')
+          .replace(/\n/gui, '&#xA;')
+      }
+
+      return newValue
+    },
   })
 
   return fs.promises.writeFile(filePath, xml)

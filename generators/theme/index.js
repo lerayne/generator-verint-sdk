@@ -166,51 +166,64 @@ module.exports = class VerintTheme extends BaseGenerator {
       )
     }
 
+    const { includeWidgets } = await this.prompt([
+      {
+        'type':    'confirm',
+        'name':    'includeWidgets',
+        'message': 'Do you want to include widgets to theme project? If yes, OOTB widgets will'
+          + ' be included automatically, custom widgets will be asked for',
+        'default': true,
+      },
+    ])
+
     let themeWidgetsPath = ''
     const themeWidgetsOOTB = []
     const themeWidgetsCustom = []
 
-    let themeWidgets = themeConfig.pageLayouts.contentFragments
-      && themeConfig.pageLayouts.contentFragments.scriptedContentFragments
-      && themeConfig.pageLayouts.contentFragments.scriptedContentFragments.scriptedContentFragment
+    if (includeWidgets) {
 
-    if (themeWidgets) {
-      themeWidgetsPath = ifCreatePath(
-        this.destinationPath(),
-        PATH_WIDGETS
-      )
+      let themeWidgets = themeConfig.pageLayouts.contentFragments
+        && themeConfig.pageLayouts.contentFragments.scriptedContentFragments
+        && themeConfig.pageLayouts.contentFragments.scriptedContentFragments.scriptedContentFragment
 
-      if (!(themeWidgets instanceof Array)) themeWidgets = [themeWidgets]
+      if (themeWidgets) {
+        themeWidgetsPath = ifCreatePath(
+          this.destinationPath(),
+          PATH_WIDGETS
+        )
 
-      // copying to avoid mutation
-      themeWidgets = [...themeWidgets]
+        if (!(themeWidgets instanceof Array)) themeWidgets = [themeWidgets]
 
-      for (const widget of themeWidgets) {
-        // console.log(widget._attributes.name, widget._attributes.instanceIdentifier)
-        // find a provider for this widget among OOTB providers
-        const widgetProvider = widgetProviders.find(provider => (
-          provider.widgetIds.some(id => (
-            id === widget._attributes.instanceIdentifier || id === widget._attributes.instanceId
+        // copying to avoid mutation
+        themeWidgets = [...themeWidgets]
+
+        for (const widget of themeWidgets) {
+          // console.log(widget._attributes.name, widget._attributes.instanceIdentifier)
+          // find a provider for this widget among OOTB providers
+          const widgetProvider = widgetProviders.find(provider => (
+            provider.widgetIds.some(id => (
+              id === widget._attributes.instanceIdentifier || id === widget._attributes.instanceId
+            ))
           ))
-        ))
 
-        if (widgetProvider) {
-          // if found - add this widget to OOTB scope (we store them in repo by default)
-          themeWidgetsOOTB.push({
-            ...widget,
-            _attributes: {
-              ...widget._attributes,
-              providerId: widgetProvider.id,
-            },
-          })
-        } else {
-          // if not found - add it to custom scope (we'll ask for its inclusion to repo)
-          themeWidgetsCustom.push(widget)
+          if (widgetProvider) {
+            // if found - add this widget to OOTB scope (we store them in repo by default)
+            themeWidgetsOOTB.push({
+              ...widget,
+              _attributes: {
+                ...widget._attributes,
+                providerId: widgetProvider.id,
+              },
+            })
+          } else {
+            // if not found - add it to custom scope (we'll ask for its inclusion to repo)
+            themeWidgetsCustom.push(widget)
+          }
         }
       }
-    }
 
-    console.log('themeWidgetsOOTB', themeWidgetsOOTB.length)
+      console.log('themeWidgetsOOTB', themeWidgetsOOTB.length)
+    }
 
     // Start writing files
 
@@ -219,7 +232,7 @@ module.exports = class VerintTheme extends BaseGenerator {
     // create "clean" XML w/o attachments for Verint FS
     const widgetXmlObjectInternal = {}
 
-    const internalRecords = [...Object.keys(themeStaticFiles), '_attributes']
+    const internalRecords = [...Object.keys(themeStaticFiles), '_attributes', 'scopedProperties']
 
     for (const [recordName, recordValue] of Object.entries(themeConfig)) {
       // copy static files
@@ -256,39 +269,41 @@ module.exports = class VerintTheme extends BaseGenerator {
     // write page layouts
     writePageLayouts(themeConfig, themeLayoutsPath)
 
-    if (themeWidgetsOOTB) {
-      for (const widget of themeWidgetsOOTB) {
-        // eslint-disable-next-line no-await-in-loop
-        await VerintWidget._processWidgetDefinition(
-          widget,
-          themeWidgetsPath,
-          attributes => ifCreatePath(themeStaticsPath, path.join(
-            'widgets',
-            attributes.providerId,
-            attributes.instanceIdentifier || attributes.instanceId
-          ))
-        )
+    if (includeWidgets) {
+      if (themeWidgetsOOTB) {
+        for (const widget of themeWidgetsOOTB) {
+          // eslint-disable-next-line no-await-in-loop
+          await VerintWidget._processWidgetDefinition(
+            widget,
+            themeWidgetsPath,
+            attributes => ifCreatePath(themeStaticsPath, path.join(
+              'widgets',
+              attributes.providerId,
+              attributes.instanceIdentifier || attributes.instanceId
+            ))
+          )
+        }
       }
-    }
 
-    if (themeWidgetsCustom) {
-      const answers = await this.prompt([
-        {
-          type:    'checkbox',
-          name:    'customWidgetIds',
-          message: 'Select custom widgets that you want to add to this project (usually custom'
-            + ' widgets are saved as separate repositories)',
-          choices: [
-            ...themeWidgetsCustom.map(widget => ({
-              name:  widget._attributes.name,
-              value: widget._attributes.instanceIdentifier || widget._attributes.instanceId,
-            })),
-            { name: '( ) ( ) ( ) ( )', value: '0', disabled: ' ' },
-          ],
-        },
-      ])
+      if (themeWidgetsCustom) {
+        const answers = await this.prompt([
+          {
+            type:    'checkbox',
+            name:    'customWidgetIds',
+            message: 'Select custom widgets that you want to add to this project (usually custom'
+              + ' widgets are saved as separate repositories)',
+            choices: [
+              ...themeWidgetsCustom.map(widget => ({
+                name:  widget._attributes.name,
+                value: widget._attributes.instanceIdentifier || widget._attributes.instanceId,
+              })),
+              { name: '( ) ( ) ( ) ( )', value: '0', disabled: ' ' },
+            ],
+          },
+        ])
 
-      // todo: actually save custom widgets
+        // todo: actually save custom widgets
+      }
     }
 
     return null

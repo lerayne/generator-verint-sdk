@@ -68,6 +68,11 @@ exports.buildInternalXmls = async function buildInternalXmls () {
           newInternalXml.styleFiles = themeConfig.styleFiles
         }
 
+        // re-save scoped properties
+        if (themeConfig.scopedProperties) {
+          newInternalXml.scopedProperties = themeConfig.scopedProperties
+        }
+
         const themeDefinitionPath = path.join(
           PATH_THEME_DEFINITIONS,
           themeTypeIds[themeType],

@@ -95,7 +95,11 @@ function writePageLayouts (themeXmlObject, themeLayoutsPath) {
         spaces:           2,
         indentCdata:      true,
         indentAttributes: true,
-        attributeValueFn: value => value.replace(/&(?!amp;)/gui, '&amp;'),
+        attributeValueFn: (value, _name, parent) => value
+          .replace(/&(?!#?[a-zA-Z0-9]+;)/gui, '&amp;')
+          .replace(/</gui, '&lt;')
+          .replace(/>/gui, '&gt;')
+          .replace(/"/gui, '&quot;'),
       })
     )
 
