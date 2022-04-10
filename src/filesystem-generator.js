@@ -1,4 +1,4 @@
-// eslint-disable-next-line import/no-unused-modules,import/unambiguous
+// eslint-disable-next-line import/no-unused-modules
 const fs = require('fs')
 const path = require('path')
 

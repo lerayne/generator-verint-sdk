@@ -9,7 +9,7 @@ const { PATH_WIDGET_FILES } = require('../../src/constants/paths')
 const BaseGenerator = require('../../src/BaseGenerator')
 
 const { getXmlWidgets, writeNewWidgetXML, createStaticFileObjectPart } = require('../../src/xml')
-const { writeAttachments, writeStatics } = require('../../src/xml-gen')
+const { writeAttachments, writeStatics } = require('../../src/filesystem-generator')
 const { ifCreatePath } = require('../../src/filesystem')
 const { widgetSafeName, getLastModified } = require('../../src/utils')
 
@@ -352,7 +352,14 @@ module.exports = class VerintWidget extends BaseGenerator {
 
     await Promise.all(
       this.inputData.widgetConfigs.map(
-        config => this._processWidgetDefinition(config, widgetsPath)
+        config => VerintWidget._processWidgetDefinition(
+          config,
+          widgetsPath,
+          attributes => {
+            const safeName = widgetSafeName(attributes.name)
+            return ifCreatePath(this.destinationPath(), path.join('src', safeName, 'statics'))
+          }
+        )
       )
     )
 
@@ -409,10 +416,11 @@ module.exports = class VerintWidget extends BaseGenerator {
    *
    * @param widgetXmlObject
    * @param widgetsPath
+   * @param ifCreateStaticPath
    * @returns {Promise<null>}
    * @private
    */
-  async _processWidgetDefinition (widgetXmlObject, widgetsPath) {
+  static async _processWidgetDefinition (widgetXmlObject, widgetsPath, ifCreateStaticPath) {
     const { _attributes } = widgetXmlObject
 
     // defining provider id and final path
@@ -438,10 +446,7 @@ module.exports = class VerintWidget extends BaseGenerator {
 
     writeAttachments(widgetXmlObject, 'files', attachmentsPath)
 
-    // create "widget safe name" in folder in src
-    const safeName = widgetSafeName(_attributes.name)
-
-    const staticPath = ifCreatePath(this.destinationPath(), `src/${safeName}/statics`)
+    const staticPath = ifCreateStaticPath(_attributes)
 
     writeStatics(widgetXmlObject, staticPath)
 

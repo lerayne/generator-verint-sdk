@@ -17,10 +17,13 @@ const PATH_THEME_LAYOUTS = 'verint/filestorage/factorydefaultpages'
 /* WIDGETS */
 const PATH_WIDGET_FILES = 'verint/filestorage/defaultwidgets'
 
+const PATH_WIDGETS = 'verint/filestorage/defaultwidgets'
+
 module.exports = {
   PATH_THEME_DEFINITIONS,
   PATH_THEME_FILES_FD,
   PATH_THEME_FILES,
   PATH_WIDGET_FILES,
+  PATH_WIDGETS,
   PATH_THEME_LAYOUTS,
 }

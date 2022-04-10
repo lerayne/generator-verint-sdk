@@ -10,16 +10,19 @@ const {
   writeStatics,
   writeThemePreview,
   writePageLayouts,
-} = require('../../src/xml-gen')
+} = require('../../src/filesystem-generator')
 const { ifCreatePath } = require('../../src/filesystem')
 const { themeTypeIds, themeTypeFolders, themeStaticFiles } = require('../../src/constants/global')
 const {
   PATH_THEME_DEFINITIONS,
   PATH_THEME_FILES_FD,
-  PATH_THEME_LAYOUTS,
+  PATH_THEME_LAYOUTS, PATH_WIDGETS,
 } = require('../../src/constants/paths') 
 const validateProjectName = require('../../src/validators/validateProjectName')
 const validateEmail = require('../../src/validators/validateEmail')
+const { widgetProviders } = require('../../src/constants/ootbWidgets')
+const VerintWidget = require('../widget')
+const { widgetSafeName } = require('../../src/utils')
 
 module.exports = class VerintTheme extends BaseGenerator {
   initializing () {
@@ -134,29 +137,10 @@ module.exports = class VerintTheme extends BaseGenerator {
   }
 
   async writing () {
-    const { mode, themeType } = this.answers
+    const { themeType } = this.answers
     const { themeConfig } = this.inputData
 
-    if (mode === 'new-xml') {
-      this._copyWithRename('', '', [
-        ['gulpfile.js', 'gulpfile.js'],
-        ['nvmrc-template', '.nvmrc'],
-        ['npmrc-template', '.npmrc'],
-        ['eslintrc-template', '.eslintrc'],
-        ['gitignore-template', '.gitignore'],
-      ])
-
-      this._copyFiles('build-scripts/gulp', 'build-scripts/gulp', ['main.js'])
-      this._copyFiles('build-scripts', 'build-scripts', ['getThemesProjectInfo.js'])
-      // this._copyFiles('verint', 'verint', ['README.md'])
-
-      this._copyFiles('../../../src', 'build-scripts', [
-        'constants/',
-        'utils.js',
-        'filesystem.js',
-        'xml.js',
-      ])
-    }
+    this._copyTemplates()
 
     // these have "if not exists" inside, so OK
     const themeXmlPath = ifCreatePath(
@@ -182,32 +166,58 @@ module.exports = class VerintTheme extends BaseGenerator {
       )
     }
 
-    await VerintTheme._processThemeDefinition(
-      themeConfig,
-      themeXmlPath,
-      themeFilesPath,
-      themeStaticsPath,
-      themeLayoutsPath
-    )
+    let themeWidgetsPath = ''
+    const themeWidgetsOOTB = []
+    const themeWidgetsCustom = []
 
-    return null
-  }
+    let themeWidgets = themeConfig.pageLayouts.contentFragments
+      && themeConfig.pageLayouts.contentFragments.scriptedContentFragments
+      && themeConfig.pageLayouts.contentFragments.scriptedContentFragments.scriptedContentFragment
 
-  static async _processThemeDefinition (
-    themeXmlObject,
-    themeXmlPath,
-    themeFilesPath,
-    themeStaticsPath,
-    themeLayoutsPath
-  ) {
-    const { _attributes } = themeXmlObject
 
-    // create "clean" XML w/o attachments for Verint's FS
+    if (themeWidgets) {
+      themeWidgetsPath = ifCreatePath(
+        this.destinationPath(),
+        PATH_WIDGETS
+      )
+
+      if (!(themeWidgets instanceof Array)) themeWidgets = [themeWidgets]
+
+      // copying to avoid mutation
+      themeWidgets = [...themeWidgets]
+
+      for (const widget of themeWidgets) {
+        // find a provider for this widget among OOTB providers
+        const widgetProvider = widgetProviders.find(provider => (
+          provider.widgetIds.some(id => id === widget.id)
+        ))
+
+        if (widgetProvider) {
+          // if found - add this widget to OOTB scope (we store them in repo by default)
+          themeWidgetsOOTB.push({
+            ...widget,
+            _attributes: {
+              ...widget._attributes,
+              providerId: widgetProvider.id,
+            },
+          })
+        } else {
+          // if not found - add it to custom scope (we'll ask for its inclusion to repo)
+          themeWidgetsCustom.push(widget)
+        }
+      }
+    }
+
+    // Start writing files
+
+    const { _attributes } = themeConfig
+
+    // create "clean" XML w/o attachments for Verint FS
     const widgetXmlObjectInternal = {}
 
     const internalRecords = [...Object.keys(themeStaticFiles), '_attributes']
 
-    for (const [recordName, recordValue] of Object.entries(themeXmlObject)) {
+    for (const [recordName, recordValue] of Object.entries(themeConfig)) {
       // copy static files
       if (internalRecords.includes(recordName)) {
         widgetXmlObjectInternal[recordName] = recordValue
@@ -216,6 +226,8 @@ module.exports = class VerintTheme extends BaseGenerator {
       // separate processing of styleFiles, because they have options that need to be saved
       if (recordName === 'styleFiles' && recordValue.file) {
         const styleFiles = (recordValue.file.length) ? recordValue.file : [recordValue.file]
+
+        // save style file definitions in internal XML file, but throw away the contents
         widgetXmlObjectInternal.styleFiles = {
           file: styleFiles.map(file => {
             const { _cdata, ...rest } = file
@@ -228,15 +240,63 @@ module.exports = class VerintTheme extends BaseGenerator {
     await writeNewThemeXML(widgetXmlObjectInternal, `${themeXmlPath}/${_attributes.id}.xml`)
 
     // write attachments
-    writeAttachments(themeXmlObject, 'files', themeFilesPath, 'files')
-    writeAttachments(themeXmlObject, 'javascriptFiles', themeFilesPath, 'jsfiles')
-    writeAttachments(themeXmlObject, 'styleFiles', themeFilesPath, 'stylesheetfiles')
+    writeAttachments(themeConfig, 'files', themeFilesPath, 'files')
+    writeAttachments(themeConfig, 'javascriptFiles', themeFilesPath, 'jsfiles')
+    writeAttachments(themeConfig, 'styleFiles', themeFilesPath, 'stylesheetfiles')
 
-    writeStatics(themeXmlObject, themeStaticsPath, themeStaticFiles)
+    writeStatics(themeConfig, themeStaticsPath, themeStaticFiles)
 
     // write preview image
-    writeThemePreview(themeXmlObject, themeFilesPath)
+    writeThemePreview(themeConfig, themeFilesPath)
 
-    writePageLayouts(themeXmlObject, themeLayoutsPath)
+    // write page layouts
+    writePageLayouts(themeConfig, themeLayoutsPath)
+
+    if (themeWidgetsOOTB) {
+      for (const widget of themeWidgetsOOTB) {
+        // eslint-disable-next-line no-await-in-loop
+        await VerintWidget._processWidgetDefinition(
+          widget,
+          themeWidgetsPath,
+          attributes => ifCreatePath(
+            this.destinationPath(),
+            path.join(themeStaticsPath, 'widgets', attributes.providerId, attributes.id)
+          )
+        )
+      }
+    }
+
+    return null
+  }
+
+  // creates widget directory
+  _ifCreateStaticPath (name) {
+    const safeName = widgetSafeName(name)
+    return ifCreatePath(this.destinationPath(), `src/${safeName}/statics`)
+  }
+
+  _copyTemplates () {
+    const { mode } = this.answers
+
+    if (mode === 'new-xml') {
+      this._copyWithRename('', '', [
+        ['gulpfile.js', 'gulpfile.js'],
+        ['nvmrc-template', '.nvmrc'],
+        ['npmrc-template', '.npmrc'],
+        ['eslintrc-template', '.eslintrc'],
+        ['gitignore-template', '.gitignore'],
+      ])
+
+      this._copyFiles('build-scripts/gulp', 'build-scripts/gulp', ['main.js'])
+      this._copyFiles('build-scripts', 'build-scripts', ['getThemesProjectInfo.js'])
+      // this._copyFiles('verint', 'verint', ['README.md'])
+
+      this._copyFiles('../../../src', 'build-scripts', [
+        'constants/',
+        'utils.js',
+        'filesystem.js',
+        'xml.js',
+      ])
+    }
   }
 }
