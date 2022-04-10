@@ -130,6 +130,37 @@ const widgetProviders = [
       'fe757b55a68043478a5014bd2d91f8db',
       'ff79be4dcc9b4884bbf9a455ef5eb1c5',
     ],
+  }, {
+    name:      'ideation',
+    id:        '57a8b45cd35e42169c9fd8812250f188',
+    widgetIds: [
+      '8f2eba6966c04afd9ee93aa6ee88ab3d',
+      '80fbac27fe0b47bdab294d1d1a91f09f',
+      '679decf2a911416fa4cc50e5b84cbe64',
+      '2985eb157a09464bbf2033075ff0cd50',
+      '5574af2a95e745b8b58751cc6e528466',
+      '75540e8339c3498185fb0e5bc9320b57',
+      'dbc0d67480b04803a4cbe2f84042e815',
+      'fb0cf555017f4690bbe0703922c03f75',
+    ],
+  }, {
+    name:      'calendar',
+    id:        'ca187a0cc5864a9392ae5b9e5f9747b7',
+    widgetIds: [
+      '0b4814f2885d4374bf18de5d71221981',
+      '8ceacb300fed4dcfa5fdc67b26189023',
+      '29aa41eefc8e406b9196f989452c5f22',
+      '36ee9a45ac7a497ca43b07458e37d5c9',
+      '68d781952e3f475ba6949577ca623604',
+      '82dced9f1b7a4eb68157ea4f1e3f5104',
+      '504c489a79bb4522bf4f3e782e46bad6',
+      'a356a8906f634b86b895865dac47c6fa',
+      'b6a41a942283418b98ceec1055d26a13',
+      'cc404397242c47a48b4673081452b109',
+      'cfb63a8508bf4d81b92002ed33d867b7',
+      'e3edd58fe7234374ae00e52bcbad33c3',
+      'ea523affa3d04646b2e0d06da0b5f588',
+    ],
   },
 ]
 

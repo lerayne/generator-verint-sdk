@@ -190,7 +190,7 @@ module.exports = class VerintTheme extends BaseGenerator {
         // find a provider for this widget among OOTB providers
         const widgetProvider = widgetProviders.find(provider => (
           provider.widgetIds.some(id => (
-            id === widget._attributes.instanceIdentifier || id === widget._attributes.id
+            id === widget._attributes.instanceIdentifier || id === widget._attributes.instanceId
           ))
         ))
 
@@ -265,10 +265,30 @@ module.exports = class VerintTheme extends BaseGenerator {
           attributes => ifCreatePath(themeStaticsPath, path.join(
             'widgets',
             attributes.providerId,
-            attributes.instanceIdentifier || attributes.id
+            attributes.instanceIdentifier || attributes.instanceId
           ))
         )
       }
+    }
+
+    if (themeWidgetsCustom) {
+      const answers = await this.prompt([
+        {
+          type:    'checkbox',
+          name:    'customWidgetIds',
+          message: 'Select custom widgets that you want to add to this project (usually custom'
+            + ' widgets are saved as separate repositories)',
+          choices: [
+            ...themeWidgetsCustom.map(widget => ({
+              name:  widget._attributes.name,
+              value: widget._attributes.instanceIdentifier || widget._attributes.instanceId,
+            })),
+            { name: '( ) ( ) ( ) ( )', value: '0', disabled: ' ' },
+          ],
+        },
+      ])
+
+      // todo: actually save custom widgets
     }
 
     return null
