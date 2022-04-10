@@ -174,7 +174,6 @@ module.exports = class VerintTheme extends BaseGenerator {
       && themeConfig.pageLayouts.contentFragments.scriptedContentFragments
       && themeConfig.pageLayouts.contentFragments.scriptedContentFragments.scriptedContentFragment
 
-
     if (themeWidgets) {
       themeWidgetsPath = ifCreatePath(
         this.destinationPath(),
@@ -187,9 +186,12 @@ module.exports = class VerintTheme extends BaseGenerator {
       themeWidgets = [...themeWidgets]
 
       for (const widget of themeWidgets) {
+        // console.log(widget._attributes.name, widget._attributes.instanceIdentifier)
         // find a provider for this widget among OOTB providers
         const widgetProvider = widgetProviders.find(provider => (
-          provider.widgetIds.some(id => id === widget.id)
+          provider.widgetIds.some(id => (
+            id === widget._attributes.instanceIdentifier || id === widget._attributes.id
+          ))
         ))
 
         if (widgetProvider) {
@@ -207,6 +209,8 @@ module.exports = class VerintTheme extends BaseGenerator {
         }
       }
     }
+
+    console.log('themeWidgetsOOTB', themeWidgetsOOTB.length)
 
     // Start writing files
 
@@ -258,10 +262,11 @@ module.exports = class VerintTheme extends BaseGenerator {
         await VerintWidget._processWidgetDefinition(
           widget,
           themeWidgetsPath,
-          attributes => ifCreatePath(
-            this.destinationPath(),
-            path.join(themeStaticsPath, 'widgets', attributes.providerId, attributes.id)
-          )
+          attributes => ifCreatePath(themeStaticsPath, path.join(
+            'widgets',
+            attributes.providerId,
+            attributes.instanceIdentifier || attributes.id
+          ))
         )
       }
     }

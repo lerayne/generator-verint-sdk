@@ -1,4 +1,4 @@
-export const widgetProviders = [
+const widgetProviders = [
   {
     name:      'core',
     id:        '7bb87a0cc5864a9392ae5b9e5f9747b7',
@@ -132,3 +132,7 @@ export const widgetProviders = [
     ],
   },
 ]
+
+module.exports = {
+  widgetProviders,
+}
