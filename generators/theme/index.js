@@ -286,10 +286,10 @@ module.exports = class VerintTheme extends BaseGenerator {
       }
 
       if (themeWidgetsCustom) {
-        const answers = await this.prompt([
+        const { approvedWidgetIds } = await this.prompt([
           {
             type:    'checkbox',
-            name:    'customWidgetIds',
+            name:    'approvedWidgetIds',
             message: 'Select custom widgets that you want to add to this project (usually custom'
               + ' widgets are saved as separate repositories)',
             choices: [
@@ -302,7 +302,23 @@ module.exports = class VerintTheme extends BaseGenerator {
           },
         ])
 
-        // todo: actually save custom widgets
+        const approvedCustomWidgets = themeWidgetsCustom.filter(widget => {
+          const widgetId = widget._attributes.instanceIdentifier || widget._attributes.instanceId
+          return approvedWidgetIds.includes(widgetId)
+        })
+
+        for (const widget of approvedCustomWidgets) {
+          // eslint-disable-next-line no-await-in-loop
+          await VerintWidget._processWidgetDefinition(
+            widget,
+            themeWidgetsPath,
+            attributes => ifCreatePath(themeStaticsPath, path.join(
+              'widgets',
+              '00000000000000000000000000000000',
+              attributes.instanceIdentifier || attributes.instanceId
+            ))
+          )
+        }
       }
     }
 
