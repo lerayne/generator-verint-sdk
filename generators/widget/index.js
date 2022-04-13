@@ -423,11 +423,20 @@ module.exports = class VerintWidget extends BaseGenerator {
    * @returns {Promise<null>}
    * @private
    */
-  static async _processWidgetDefinition (widgetXmlObject, widgetsPath, ifCreateStaticPath) {
+  static async _processWidgetDefinition (
+    widgetXmlObject,
+    widgetsPath,
+    ifCreateStaticPath,
+    customProviderId
+  ) {
     const { _attributes } = widgetXmlObject
 
     // defining provider id and final path
-    const providerId = _attributes.providerId || '00000000000000000000000000000000'
+    const providerId = (
+      customProviderId
+      || _attributes.providerId
+      || '00000000000000000000000000000000'
+    )
     const providerPath = ifCreatePath(widgetsPath, providerId)
 
     // widget main id that is also file and folder name in Verint's FS

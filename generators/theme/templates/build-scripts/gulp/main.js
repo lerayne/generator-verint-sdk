@@ -41,7 +41,6 @@ function promiseFidgetFileWrites (staticsPath) {
           ))
 
         for (const widgetId of widgetIdDirs) {
-          // console.log(1, widgetsStaticsPath, providerId, widgetId)
           promises.push(writeWidgetInternalXML(widgetsStaticsPath, providerId, widgetId))
         }
       }

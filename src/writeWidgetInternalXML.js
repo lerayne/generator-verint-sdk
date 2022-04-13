@@ -1,12 +1,10 @@
 const path = require('path')
 const fs = require('fs')
 
-const { xml2js } = require('xml-js')
-
 const { PATH_WIDGETS } = require('./constants/paths')
 const packageJson = require('../package.json')
-const { getLastModified, getNewDescription } = require('../utils')
-const { writeNewWidgetXML, createStaticFileObjectPart } = require('../xml')
+const { getLastModified, getNewDescription } = require('./utils')
+const { writeNewWidgetXML, createStaticFileObjectPart, getXmlWidgets } = require('./xml')
 
 exports.writeWidgetInternalXML = function writeWidgetInternalXML (
   staticsPath,
@@ -15,10 +13,7 @@ exports.writeWidgetInternalXML = function writeWidgetInternalXML (
 ) {
   const internalWidgetXMLFilePath = path.join(PATH_WIDGETS, providerId, `${widgetId}.xml`)
 
-  const currentWidgetXml = xml2js(
-    fs.readFileSync(internalWidgetXMLFilePath, { encoding: 'utf8' }),
-    { compact: true }
-  )
+  const [currentWidgetXml] = getXmlWidgets(internalWidgetXMLFilePath)
 
   // initializing future widget XML
   let newWidgetXmlObject = {
@@ -32,12 +27,13 @@ exports.writeWidgetInternalXML = function writeWidgetInternalXML (
     },
   }
 
-  const staticsFileList = fs.readdirSync(staticsPath)
+  const staticFilesDir = path.join(staticsPath, providerId, widgetId)
+  const staticsFileList = fs.readdirSync(staticFilesDir)
 
   for (const fileName of staticsFileList) {
     const filePartial = createStaticFileObjectPart(
       fileName,
-      fs.readFileSync(path.join(staticsPath, fileName), { encoding: 'utf8' })
+      fs.readFileSync(path.join(staticFilesDir, fileName), { encoding: 'utf8' })
     )
 
     newWidgetXmlObject = { ...newWidgetXmlObject, ...filePartial }

@@ -2,6 +2,8 @@ const path = require('path')
 const fs = require('fs')
 
 const execa = require('execa')
+const { v4: uuidv4 } = require('uuid')
+const yaml = require('js-yaml')
 
 const BaseGenerator = require('../../src/BaseGenerator')
 const { getXmlTheme, writeNewThemeXML } = require('../../src/xml')
@@ -166,27 +168,44 @@ module.exports = class VerintTheme extends BaseGenerator {
       )
     }
 
-    const { includeWidgets } = await this.prompt([
-      {
-        'type':    'confirm',
-        'name':    'includeWidgets',
-        'message': 'Do you want to include widgets to theme project? If yes, OOTB widgets will'
-          + ' be included automatically, custom widgets will be asked for',
-        'default': true,
-      },
-    ])
+    let themeWidgets = themeConfig.pageLayouts.contentFragments
+      && themeConfig.pageLayouts.contentFragments.scriptedContentFragments
+      && themeConfig.pageLayouts.contentFragments.scriptedContentFragments.scriptedContentFragment
 
     let themeWidgetsPath = ''
     const themeWidgetsOOTB = []
     const themeWidgetsCustom = []
+    let includeWidgets = false
 
-    if (includeWidgets) {
+    // IMPORTANT: for each theme we create 2 individual UUIDs to store widgets instead of
+    // the OOTB UUIDs. This is made for 2 reasons:
+    // 1) there can be several themes in the project, but only one
+    //    "verint/filestorage/defaultwidgets" folder. This means if some two themes will have
+    //    the same OOTB widget customized differently - they will overwrite each other on
+    //    internal/bundle build
+    // 2) If we use direct deploy to file system - we should never overwrite actual factory
+    //    default widgets. We have some time to invent a way to properly deploy them
+    // important note: if theme is deployed via Theme Studio - this will not interfere, as
+    // Theme Studio bundle file doesn't include widget provider IDs whatsoever.
+    const ootbWidgetProvUuid = uuidv4().replace(/-/gu, '')
+    const customWidgetProvUuid = uuidv4().replace(/-/gu, '')
 
-      let themeWidgets = themeConfig.pageLayouts.contentFragments
-        && themeConfig.pageLayouts.contentFragments.scriptedContentFragments
-        && themeConfig.pageLayouts.contentFragments.scriptedContentFragments.scriptedContentFragment
+    if (themeWidgets) {
 
-      if (themeWidgets) {
+      // prompting for widgets
+      const answers = await this.prompt([
+        {
+          'type':    'confirm',
+          'name':    'includeWidgets',
+          'message': 'Do you want to include widgets to theme project? (If yes, OOTB widgets will'
+            + ' be included automatically, custom widgets will be asked for)',
+          'default': true,
+        },
+      ])
+
+      includeWidgets = answers.includeWidgets
+
+      if (includeWidgets) {
         themeWidgetsPath = ifCreatePath(
           this.destinationPath(),
           PATH_WIDGETS
@@ -198,7 +217,6 @@ module.exports = class VerintTheme extends BaseGenerator {
         themeWidgets = [...themeWidgets]
 
         for (const widget of themeWidgets) {
-          // console.log(widget._attributes.name, widget._attributes.instanceIdentifier)
           // find a provider for this widget among OOTB providers
           const widgetProvider = widgetProviders.find(provider => (
             provider.widgetIds.some(id => (
@@ -208,13 +226,7 @@ module.exports = class VerintTheme extends BaseGenerator {
 
           if (widgetProvider) {
             // if found - add this widget to OOTB scope (we store them in repo by default)
-            themeWidgetsOOTB.push({
-              ...widget,
-              _attributes: {
-                ...widget._attributes,
-                providerId: widgetProvider.id,
-              },
-            })
+            themeWidgetsOOTB.push(widget)
           } else {
             // if not found - add it to custom scope (we'll ask for its inclusion to repo)
             themeWidgetsCustom.push(widget)
@@ -270,7 +282,23 @@ module.exports = class VerintTheme extends BaseGenerator {
     writePageLayouts(themeConfig, themeLayoutsPath)
 
     if (includeWidgets) {
-      if (themeWidgetsOOTB) {
+      if (themeWidgetsOOTB.length) {
+        // creating provider readme file to understand what theme and what widget type it is
+        const providerYaml = yaml.dump({
+          themeId:            themeConfig._attributes.id,
+          themeName:          themeConfig._attributes.name,
+          themeType:          themeType,
+          widgetProviderType: 'OOTB',
+          widgetProvider:     ootbWidgetProvUuid,
+        })
+
+        const providerFSPath = ifCreatePath(themeWidgetsPath, ootbWidgetProvUuid)
+        const providerSrcPath = (
+          ifCreatePath(themeStaticsPath, path.join('widgets', ootbWidgetProvUuid))
+        )
+        fs.writeFileSync(path.join(providerFSPath, 'provider.yaml'), providerYaml)
+        fs.writeFileSync(path.join(providerSrcPath, 'provider.yaml'), providerYaml)
+
         for (const widget of themeWidgetsOOTB) {
           // eslint-disable-next-line no-await-in-loop
           await VerintWidget._processWidgetDefinition(
@@ -278,14 +306,15 @@ module.exports = class VerintTheme extends BaseGenerator {
             themeWidgetsPath,
             attributes => ifCreatePath(themeStaticsPath, path.join(
               'widgets',
-              attributes.providerId,
+              ootbWidgetProvUuid,
               attributes.instanceIdentifier || attributes.instanceId
-            ))
+            )),
+            ootbWidgetProvUuid
           )
         }
       }
 
-      if (themeWidgetsCustom) {
+      if (themeWidgetsCustom.length) {
         const { approvedWidgetIds } = await this.prompt([
           {
             type:    'checkbox',
@@ -307,17 +336,36 @@ module.exports = class VerintTheme extends BaseGenerator {
           return approvedWidgetIds.includes(widgetId)
         })
 
-        for (const widget of approvedCustomWidgets) {
-          // eslint-disable-next-line no-await-in-loop
-          await VerintWidget._processWidgetDefinition(
-            widget,
-            themeWidgetsPath,
-            attributes => ifCreatePath(themeStaticsPath, path.join(
-              'widgets',
-              '00000000000000000000000000000000',
-              attributes.instanceIdentifier || attributes.instanceId
-            ))
+        // creating provider readme file to understand what theme and what widget type it is
+        if (approvedCustomWidgets.length) {
+          const providerYaml = yaml.dump({
+            themeId:            themeConfig._attributes.id,
+            themeName:          themeConfig._attributes.name,
+            themeType:          themeType,
+            widgetProviderType: 'custom',
+            widgetProvider:     customWidgetProvUuid,
+          })
+
+          const providerFSPath = ifCreatePath(themeWidgetsPath, customWidgetProvUuid)
+          const providerSrcPath = (
+            ifCreatePath(themeStaticsPath, path.join('widgets', customWidgetProvUuid))
           )
+          fs.writeFileSync(path.join(providerFSPath, 'provider.yaml'), providerYaml)
+          fs.writeFileSync(path.join(providerSrcPath, 'provider.yaml'), providerYaml)
+
+          for (const widget of approvedCustomWidgets) {
+            // eslint-disable-next-line no-await-in-loop
+            await VerintWidget._processWidgetDefinition(
+              widget,
+              themeWidgetsPath,
+              attributes => ifCreatePath(themeStaticsPath, path.join(
+                'widgets',
+                customWidgetProvUuid,
+                attributes.instanceIdentifier || attributes.instanceId
+              )),
+              customWidgetProvUuid
+            )
+          }
         }
       }
     }
