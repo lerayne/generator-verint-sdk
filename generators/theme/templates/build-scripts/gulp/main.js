@@ -20,7 +20,36 @@ const {
 } = require('../constants/paths')
 const { writeNewThemeXML, getXmlTheme } = require('../xml')
 const { ifCreatePath } = require('../filesystem')
+const { writeWidgetInternalXML } = require('../writeWidgetInternalXML')
 const packageJson = require('../../package.json')
+
+function promiseFidgetFileWrites (staticsPath) {
+  const promises = []
+  // read theme's widgets and write their XMLs in local FS
+  const widgetsStaticsPath = path.join(staticsPath, 'widgets')
+
+  if (fs.existsSync(widgetsStaticsPath)) {
+    const providerIdDirs = fs.readdirSync(widgetsStaticsPath).filter(entry => (
+      fs.lstatSync(path.join(widgetsStaticsPath, entry)).isDirectory()
+    ))
+
+    if (providerIdDirs.length) {
+      for (const providerId of providerIdDirs) {
+        const widgetIdDirs = fs.readdirSync(path.join(widgetsStaticsPath, providerId))
+          .filter(entry => (
+            fs.lstatSync(path.join(widgetsStaticsPath, providerId, entry)).isDirectory()
+          ))
+
+        for (const widgetId of widgetIdDirs) {
+          // console.log(1, widgetsStaticsPath, providerId, widgetId)
+          promises.push(writeWidgetInternalXML(widgetsStaticsPath, providerId, widgetId))
+        }
+      }
+    }
+  }
+
+  return promises
+}
 
 /**
  * 1) Read theme configs from verint/filestorage/themefiles/d
@@ -32,7 +61,7 @@ const packageJson = require('../../package.json')
 exports.buildInternalXmls = async function buildInternalXmls () {
   const THEMES = getThemesProjectInfo()
 
-  const promises = []
+  let promises = []
 
   if (THEMES) {
     for (const [themeType, themesOfType] of Object.entries(THEMES)) {
@@ -57,6 +86,7 @@ exports.buildInternalXmls = async function buildInternalXmls () {
           .filter(entry => Object.values(themeStaticFiles).includes(entry))
 
         for (const fileName of staticFiles) {
+          // get XML tag name from file name
           const recordName = objectReverse(themeStaticFiles)[fileName]
           newInternalXml[recordName] = {
             _cdata: fs.readFileSync(path.join(staticsPath, fileName)).toString(),
@@ -80,6 +110,8 @@ exports.buildInternalXmls = async function buildInternalXmls () {
         )
 
         promises.push(writeNewThemeXML(newInternalXml, themeDefinitionPath))
+
+        promises = [...promises, ...promiseFidgetFileWrites(staticsPath)]
       }
     }
   }

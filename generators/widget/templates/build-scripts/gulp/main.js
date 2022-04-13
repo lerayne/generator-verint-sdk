@@ -2,10 +2,11 @@
 const path = require('path')
 const fs = require('fs')
 
-const { writeNewWidgetXML, getXmlWidgets, createStaticFileObjectPart } = require('../xml')
+const { writeNewWidgetXML, getXmlWidgets } = require('../xml')
 const { ifCreatePath } = require('../filesystem')
-const { getLastModified, binaryToBase64, getNewDescription } = require('../utils')
+const { getLastModified, binaryToBase64 } = require('../utils')
 const { getProjectInfo } = require('../getProjectInfo')
+const { writeWidgetInternalXML } = require('../writeWidgetInternalXML')
 const packageJson = require('../../package.json')
 
 /*
@@ -31,35 +32,10 @@ exports.buildInternalXml = function buildInternalXml () {
     const xmlFilesToWrite = WIDGETS.map(widget => {
       // read statics files
       const staticsPath = path.join('src', widget.safeName, 'statics')
-      const staticsFileList = fs.readdirSync(staticsPath)
+      const widgetProviderId = widget.xmlMeta.providerId || '00000000000000000000000000000000'
 
-      // initializing future widget XML
-      let widgetXmlObject = {
-        _attributes: {
-          ...widget.xmlMeta,
-          lastModified: getLastModified(),
-          description:  getNewDescription(
-            widget.xmlMeta.description,
-            packageJson.version
-          ),
-        },
-      }
-
-      // read statics from src/{widgetName}/statics and put them into the object
-      staticsFileList.forEach(fileName => {
-        const filePartial = createStaticFileObjectPart(
-          fileName,
-          fs.readFileSync(path.join(staticsPath, fileName), { encoding: 'utf8' })
-        )
-
-        widgetXmlObject = { ...widgetXmlObject, ...filePartial }
-      })
-
-      // just in case a widget's config has requiredContext field
-      if (widget.requiredContext) widgetXmlObject.requiredContext = widget.requiredContext
-
-      // create promise to return an array of promises
-      return writeNewWidgetXML(widgetXmlObject, path.join(widget.widgetsFolder, widget.xmlFileName))
+      // todo: I changed the way how we get current widget XML. Consider other changes to the code
+      return writeWidgetInternalXML(staticsPath, widgetProviderId, widget.folderInstanceId)
     })
 
     return Promise.all(xmlFilesToWrite)

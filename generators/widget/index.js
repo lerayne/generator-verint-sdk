@@ -342,9 +342,11 @@ module.exports = class VerintWidget extends BaseGenerator {
       }
 
       this._copyFiles('../../../src', 'build-scripts', [
+        'constants/',
         'utils.js',
         'filesystem.js',
         'xml.js',
+        'writeWidgetInternalXML.js',
       ])
     }
 

@@ -352,6 +352,7 @@ module.exports = class VerintTheme extends BaseGenerator {
         'utils.js',
         'filesystem.js',
         'xml.js',
+        'writeWidgetInternalXML.js',
       ])
     }
   }
