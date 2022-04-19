@@ -4,10 +4,10 @@ const fs = require('fs')
 
 const { writeNewWidgetXML, getXmlWidgets } = require('../xml')
 const { ifCreatePath } = require('../filesystem')
-const { getLastModified, binaryToBase64 } = require('../utils')
 const { getProjectInfo } = require('../getProjectInfo')
 const { writeWidgetInternalXML } = require('../writeWidgetInternalXML')
 const packageJson = require('../../package.json')
+const { readWidgetToBundle } = require('../readWidgetToBundle')
 
 /*
 * Builds verint internal XML file that is used in verint file system, replicated in
@@ -45,6 +45,7 @@ exports.buildInternalXml = function buildInternalXml () {
   }
 }
 
+
 /**
  * This script takes Verint internal XML file built by previous script (buildInternalXml) and
  * builds bundled XML based on it
@@ -65,47 +66,12 @@ exports.buildBundleXml = function buildBundleXml () {
 
     // this is template for future XML structure
     const bundleXMLObject = WIDGETS.map(widget => {
-      // read current xml
       const [mainSection] = getXmlWidgets(path.join(widget.widgetsFolder, widget.xmlFileName))
-      const attachmentsPath = path.join(widget.widgetsFolder, widget.folderInstanceId)
-      let widgetFiles = []
 
-      // collect files base64 data for new XML
-      if (fs.existsSync(attachmentsPath)) {
-        const filesList = fs.readdirSync(attachmentsPath)
-
-        if (filesList.length) {
-          widgetFiles = filesList.map(fileName => {
-            const fileContents = fs.readFileSync(path.join(attachmentsPath, fileName))
-
-            return {
-              _attributes: { name: fileName },
-              _text:       binaryToBase64(fileContents),
-            }
-          })
-        }
-      }
-
-      // copy static files directly from original XML
-      const staticFiles = {}
-      Object.keys(mainSection).forEach(recordName => {
-        if (!['_attributes', 'files', 'requiredContext'].includes(recordName)) {
-          staticFiles[recordName] = mainSection[recordName]
-        }
-      })
-
-      // creating new widget XML object
-      const newXMLObject = {
-        _attributes: { ...widget.xmlMeta, lastModified: getLastModified() },
-        ...staticFiles,
-        files:       widgetFiles.length ? { file: widgetFiles } : null,
-      }
-
-      if (mainSection.requiredContext) {
-        newXMLObject.requiredContext = mainSection.requiredContext
-      }
-
-      return newXMLObject
+      return readWidgetToBundle(
+        mainSection,
+        path.join(widget.widgetsFolder, widget.folderInstanceId)
+      )
     })
 
     // ensure distrib directory

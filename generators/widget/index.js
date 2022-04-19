@@ -347,6 +347,7 @@ module.exports = class VerintWidget extends BaseGenerator {
         'filesystem.js',
         'xml.js',
         'writeWidgetInternalXML.js',
+        'readWidgetToBundle.js',
       ])
     }
 

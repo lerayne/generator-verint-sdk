@@ -3,6 +3,7 @@ const fs = require('fs')
 
 const { xml2js } = require('xml-js')
 const inquirer = require('inquirer')
+const yaml = require('js-yaml')
 
 const getThemesProjectInfo = require('../getThemesProjectInfo')
 const {
@@ -17,11 +18,19 @@ const {
   PATH_THEME_DEFINITIONS,
   PATH_THEME_FILES_FD,
   PATH_THEME_LAYOUTS,
+  PATH_WIDGETS,
 } = require('../constants/paths')
-const { writeNewThemeXML, getXmlTheme } = require('../xml')
+const { writeNewThemeXML, getXmlTheme, getXmlWidgets } = require('../xml')
 const { ifCreatePath } = require('../filesystem')
 const { writeWidgetInternalXML } = require('../writeWidgetInternalXML')
+const { readWidgetToBundle } = require('../readWidgetToBundle')
 const packageJson = require('../../package.json')
+
+function getDirsList (somePath) {
+  return fs.readdirSync(somePath).filter(entryName => (
+    fs.lstatSync(path.join(somePath, entryName)).isDirectory()
+  ))
+}
 
 function promiseFidgetFileWrites (staticsPath) {
   const promises = []
@@ -29,16 +38,11 @@ function promiseFidgetFileWrites (staticsPath) {
   const widgetsStaticsPath = path.join(staticsPath, 'widgets')
 
   if (fs.existsSync(widgetsStaticsPath)) {
-    const providerIdDirs = fs.readdirSync(widgetsStaticsPath).filter(entry => (
-      fs.lstatSync(path.join(widgetsStaticsPath, entry)).isDirectory()
-    ))
+    const providerIdDirs = getDirsList(widgetsStaticsPath)
 
     if (providerIdDirs.length) {
       for (const providerId of providerIdDirs) {
-        const widgetIdDirs = fs.readdirSync(path.join(widgetsStaticsPath, providerId))
-          .filter(entry => (
-            fs.lstatSync(path.join(widgetsStaticsPath, providerId, entry)).isDirectory()
-          ))
+        const widgetIdDirs = getDirsList(path.join(widgetsStaticsPath, providerId))
 
         for (const widgetId of widgetIdDirs) {
           promises.push(writeWidgetInternalXML(widgetsStaticsPath, providerId, widgetId))
@@ -48,6 +52,35 @@ function promiseFidgetFileWrites (staticsPath) {
   }
 
   return promises
+}
+
+function layoutsExist (themes) {
+  return Object.values(themes)
+    .some(themesOfType => (
+      themesOfType.some(themeConfig => (
+        fs.existsSync(path.join(
+          PATH_THEME_LAYOUTS,
+          String(themeConfig._attributes.id),
+          `${themeConfig._attributes.themeTypeId}.xml`
+        ))
+      ))
+    ))
+}
+
+function widgetsExist () {
+  // find if there are any widgets in the project
+  const widgetProvidersPathExists = fs.existsSync(PATH_WIDGETS)
+
+  if (!widgetProvidersPathExists) return false
+
+  const providerDirs = getDirsList(PATH_WIDGETS)
+
+  if (!providerDirs.length) return false
+
+  return providerDirs.some(dirName => {
+    const contents = fs.readdirSync(path.join(PATH_WIDGETS, dirName))
+    return contents.find(fileName => fileName.match(/\.xml$/ui))
+  })
 }
 
 /**
@@ -207,6 +240,56 @@ function readThemeLayouts (themeConfig) {
   return objectPart
 }
 
+function readWidgets (themeConfig, includeOOTB, includeCustom) {
+  let objectPart = {}
+
+  const { id: themeId, themeTypeId } = themeConfig._attributes
+
+  const themeType = objectReverse(themeTypeIds)[themeTypeId]
+  const themeWidgetProvidersPath = path.join('src', 'statics', themeType, themeId, 'widgets')
+
+  if (fs.existsSync(themeWidgetProvidersPath)) {
+    const themeWidgetProviders = getDirsList(themeWidgetProvidersPath)
+
+    for (const provider of themeWidgetProviders) {
+      const providerPath = path.join(themeWidgetProvidersPath, provider)
+      const yamlFile = yaml.load(fs.readFileSync(path.join(providerPath, 'provider.yaml')))
+      if (
+        yamlFile && (
+          (yamlFile.widgetProviderType === 'OOTB' && includeOOTB)
+          || (yamlFile.widgetProviderType === 'custom' && includeCustom)
+        )
+      ) {
+        const widgetIds = getDirsList(providerPath)
+        for (const widgetId of widgetIds) {
+          const widgetXmlPath = path.join(PATH_WIDGETS, provider, `${widgetId}.xml`)
+          const widgetAttachmentsPath = path.join(PATH_WIDGETS, provider, widgetId)
+
+          if (fs.existsSync(widgetXmlPath)) {
+            if (!objectPart.contentFragments) {
+              objectPart = {
+                contentFragments: {
+                  scriptedContentFragments: {
+                    scriptedContentFragment: [],
+                  },
+                },
+              }
+            }
+
+            const [widgetXmlObject] = getXmlWidgets(widgetXmlPath)
+
+            objectPart.contentFragments.scriptedContentFragments.scriptedContentFragment.push(
+              readWidgetToBundle(widgetXmlObject, widgetAttachmentsPath)
+            )
+          }
+        }
+      }
+    }
+  }
+
+  return objectPart
+}
+
 function readThemePreview (themeConfig, themeType) {
   const objectPart = {}
 
@@ -246,28 +329,33 @@ exports.buildBundleXmls = async function buildBundleXmls () {
     // gathering theme data for inquiring
     const questions = []
     let answers = {}
-    let pageLayoutsFound = false
 
-    for (const themesOfType of Object.values(THEMES)) {
-      for (const themeConfig of themesOfType) {
-        const layoutsPath = path.join(
-          PATH_THEME_LAYOUTS,
-          themeConfig._attributes.id,
-          `${themeConfig._attributes.themeTypeId}.xml`
-        )
-
-        if (fs.existsSync(layoutsPath)) {
-          pageLayoutsFound = true
-        }
-      }
-    }
+    // find if any theme has page layouts in its sources
+    const pageLayoutsFound = layoutsExist(THEMES)
+    const widgetsFound = widgetsExist()
 
     // adding questions
     if (pageLayoutsFound) {
       questions.push({
         'type':    'confirm',
         'name':    'includeLayouts',
-        'message': 'Do you want to include page layouts into bundle?',
+        'message': 'Do you want to include page layouts to the bundle?',
+        'default': true,
+      })
+    }
+
+    if (widgetsFound) {
+      questions.push({
+        'type':    'confirm',
+        'name':    'includeOotbWidgets',
+        'message': 'Do you want to include modified OOTB widgets to the bundle?',
+        'default': true,
+      })
+
+      questions.push({
+        'type':    'confirm',
+        'name':    'includeCustomWidgets',
+        'message': 'Do you want to include custom widgets to the bundle?',
         'default': true,
       })
     }
@@ -301,6 +389,16 @@ exports.buildBundleXmls = async function buildBundleXmls () {
           themeObjectXml = {
             ...themeObjectXml,
             ...readThemeLayouts(themeConfig),
+          }
+        }
+
+        if (answers.includeOotbWidgets || answers.includeCustomWidgets) {
+          themeObjectXml = {
+            ...themeObjectXml,
+            pageLayouts: {
+              ...themeObjectXml.pageLayouts || {},
+              ...readWidgets(themeConfig, answers.includeOotbWidgets, answers.includeCustomWidgets),
+            },
           }
         }
 
