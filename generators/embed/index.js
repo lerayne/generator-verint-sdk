@@ -38,7 +38,7 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
     const scaffolded = this.inputData.existingPackageJson.keywords
       && this.inputData.existingPackageJson.keywords.includes('scaffolded')
 
-    if (!scaffolded) {
+    if (scaffolded) {
       this.log.error('Project is already scaffolded')
       process.exit(-1)
     }
@@ -264,7 +264,7 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
     // these have "if not exists" inside, so OK
     const embedsPath = ifCreatePath(this.destinationPath(), PATH_EMBEDDABLE_FILES)
 
-    VerintEmbeddable._processEmbedDefinition(this.inputData.embedConfig, embedsPath)
+    this._processEmbedDefinition(this.inputData.embedConfig, embedsPath)
   }
 
   end () {
