@@ -1,12 +1,13 @@
+// eslint-disable-next-line import/no-unused-modules
 const path = require('path')
 const fs = require('fs')
 
-const { writeNewXML, getXmlMainSections, createStaticFileObjectPart } = require('../xml')
-const { ifCreateDir } = require('../filesystem')
-const { getLastModified, textToBase64 } = require('../utils')
+const { writeNewWidgetXML, getXmlWidgets } = require('../xml')
+const { ifCreatePath } = require('../filesystem')
 const { getProjectInfo } = require('../getProjectInfo')
+const { writeWidgetInternalXML } = require('../writeWidgetInternalXML')
 const packageJson = require('../../package.json')
-
+const { readWidgetToBundle } = require('../readWidgetToBundle')
 
 /*
 * Builds verint internal XML file that is used in verint file system, replicated in
@@ -16,48 +17,34 @@ const packageJson = require('../../package.json')
 * If external (import/export) XML with many widgets in one file is needed - it is created
 * afterwards using file structure created by this one
 * */
-exports.buildInternalXml = async function buildInternalXml () {
+exports.buildInternalXml = function buildInternalXml () {
   try {
-    //getting all metadata for every widget in the current /verint/filestorage/defaultwidgets
+    // getting all metadata for every widget in the current /verint/filestorage/defaultwidgets
     const WIDGETS = getProjectInfo('defaultwidgets')
 
     console.log('WIDGETS', JSON.stringify(WIDGETS))
 
-    //checking access of each widget file
-    WIDGETS.forEach(widget => fs.accessSync(path.join(widget.widgetsFolder, widget.xmlFileName)))
+    // checking access of each widget file
+    for (const widget of WIDGETS) {
+      fs.accessSync(path.join(widget.widgetsFolder, widget.xmlFileName))
+    }
 
     const xmlFilesToWrite = WIDGETS.map(widget => {
-      //read statics files
+      // read statics files
       const staticsPath = path.join('src', widget.safeName, 'statics')
-      const staticsFileList = fs.readdirSync(staticsPath)
+      const widgetProviderId = widget.xmlMeta.providerId || '00000000000000000000000000000000'
 
-      // initializing future widget XML
-      let widgetXmlObject = {
-        _attributes: { ...widget.xmlMeta, lastModified: getLastModified() },
-      }
-
-      // read statics from src/{widgetName}/statics and put them into the object
-      staticsFileList.forEach(fileName => {
-        const filePartial = createStaticFileObjectPart(
-          fileName,
-          fs.readFileSync(path.join(staticsPath, fileName), { encoding: 'utf8' })
-        )
-
-        widgetXmlObject = { ...widgetXmlObject, ...filePartial }
-      })
-
-      // just in case a widget's config has requiredContext field
-      if (widget.requiredContext) widgetXmlObject.requiredContext = widget.requiredContext
-
-      //create promise to return an array of promises
-      return writeNewXML(widgetXmlObject, path.join(widget.widgetsFolder, widget.xmlFileName))
+      // todo: I changed the way how we get current widget XML. Consider other changes to the code
+      return writeWidgetInternalXML(staticsPath, widgetProviderId, widget.folderInstanceId)
     })
 
     return Promise.all(xmlFilesToWrite)
-  } catch (err) {
-    console.error(err)
+  } catch (ex) {
+    console.error(ex)
+    throw ex
   }
 }
+
 
 /**
  * This script takes Verint internal XML file built by previous script (buildInternalXml) and
@@ -65,74 +52,36 @@ exports.buildInternalXml = async function buildInternalXml () {
  *
  * @returns {Promise<void>}
  */
-exports.buildBundleXml = async function buildBundleXml () {
+exports.buildBundleXml = function buildBundleXml () {
   try {
-    //getting all data for every widget in the current config
+    // getting all data for every widget in the current config
     const WIDGETS = getProjectInfo('defaultwidgets')
 
     console.log('WIDGETS', JSON.stringify(WIDGETS))
 
-    //checking access of each widget file
-    WIDGETS.forEach(widget => fs.accessSync(path.join(widget.widgetsFolder, widget.xmlFileName)))
+    // checking access of each widget file
+    for (const widget of WIDGETS) {
+      fs.accessSync(path.join(widget.widgetsFolder, widget.xmlFileName))
+    }
 
-    //this is template for future XML structure
+    // this is template for future XML structure
     const bundleXMLObject = WIDGETS.map(widget => {
-      //read current xml
-      const [mainSection] = getXmlMainSections(path.join(widget.widgetsFolder, widget.xmlFileName))
-      const attachmentsPath = path.join(widget.widgetsFolder, widget.folderInstanceId)
-      let widgetFiles = []
+      const [mainSection] = getXmlWidgets(path.join(widget.widgetsFolder, widget.xmlFileName))
 
-      //collect files base64 data for new XML
-      if (fs.existsSync(attachmentsPath)) {
-        const filesList = fs.readdirSync(attachmentsPath)
-
-        if (filesList.length) {
-          widgetFiles = filesList.map(fileName => {
-            //if it's not image - read it as utf8
-            const options = {}
-            if (!fileName.match(/.(png|jpg|jpeg|gif|webm)$/i)) { options.encoding = 'utf8' }
-
-            const fileContents = fs.readFileSync(path.join(attachmentsPath, fileName), options)
-
-            return {
-              _attributes: { name: fileName },
-              _text: textToBase64(fileContents)
-            }
-          })
-        }
-      }
-
-      //copy static files directly from original XML
-      const staticFiles = {}
-      Object.keys(mainSection).forEach(recordName => {
-        if (!['_attributes', 'files', 'requiredContext'].includes(recordName)) {
-          staticFiles[recordName] = mainSection[recordName]
-        }
-      })
-
-      // creating new widget XML object
-      const newXMLObject = {
-        _attributes: { ...widget.xmlMeta, lastModified: getLastModified() },
-        ...staticFiles,
-        files: widgetFiles.length ? { file: widgetFiles } : null
-      }
-
-      if (mainSection.requiredContext) {
-        newXMLObject.requiredContext = mainSection.requiredContext
-      }
-
-      return newXMLObject
+      return readWidgetToBundle(
+        mainSection,
+        path.join(widget.widgetsFolder, widget.folderInstanceId)
+      )
     })
 
     // ensure distrib directory
-    const distribDir = path.join('distrib')
-    await ifCreateDir(distribDir)
+    const distribDir = ifCreatePath('distrib')
 
-    const xmlFileName =
-      `${packageJson.name.toLowerCase().replace(/\s/gmi, '-')}-${packageJson.version}.xml`
+    const xmlFileName = `${packageJson.name.toLowerCase().replace(/\s/gumi, '-')}-${packageJson.version}.xml`
 
-    return writeNewXML(bundleXMLObject, path.join(distribDir, xmlFileName))
-  } catch (err) {
-    console.error(err)
+    return writeNewWidgetXML(bundleXMLObject, path.join(distribDir, xmlFileName))
+  } catch (ex) {
+    console.error(ex)
+    throw ex
   }
 }

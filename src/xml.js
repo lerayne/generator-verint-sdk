@@ -1,4 +1,6 @@
+// eslint-disable-next-line import/no-unused-modules
 const fs = require('fs')
+
 const { js2xml, xml2js } = require('xml-js')
 
 function getXMLContents (filePath) {
@@ -6,7 +8,7 @@ function getXMLContents (filePath) {
   return xml2js(xmlFile, { compact: true })
 }
 
-function getXmlMainSections (filePath) {
+function getXmlWidgets (filePath) {
   const xmlFileContents = getXMLContents(filePath)
 
   if (
@@ -22,23 +24,59 @@ function getXmlMainSections (filePath) {
   return []
 }
 
+function getXmlTheme (filePath) {
+  const xmlFileContents = getXMLContents(filePath)
+
+  return xmlFileContents.theme
+}
+
 /**
  * @param widgetXmlObjects - object or an array of objects
  * @param filePath
  * @returns {Promise<void>}
  */
-async function writeNewXML (widgetXmlObjects, filePath) {
+function writeNewWidgetXML (widgetXmlObjects, filePath) {
   const widgetObject = {
     scriptedContentFragments: {
-      scriptedContentFragment: widgetXmlObjects
-    }
+      scriptedContentFragment: widgetXmlObjects,
+    },
   }
 
   const xml = js2xml(widgetObject, {
-    compact: true,
-    spaces: 2,
-    indentCdata: true,
-    indentAttributes: true
+    compact:          true,
+    // eslint-disable-next-line no-magic-numbers
+    spaces:           2,
+    indentCdata:      true,
+    indentAttributes: true,
+  })
+
+  return fs.promises.writeFile(filePath, xml)
+}
+
+function writeNewThemeXML (themeXmlObject, filePath) {
+  const xml = js2xml({
+    theme: themeXmlObject,
+  }, {
+    compact:          true,
+    // eslint-disable-next-line no-magic-numbers
+    spaces:           2,
+    indentCdata:      true,
+    indentAttributes: true,
+    attributeValueFn: (value, _name, parent) => {
+      let newValue = value
+        .replace(/&(?!#?[a-zA-Z0-9]+;)/gui, '&amp;')
+        .replace(/</gui, '&lt;')
+        .replace(/>/gui, '&gt;')
+        .replace(/"/gui, '&quot;')
+
+      if (parent === 'scopedProperty') {
+        newValue = newValue
+          .replace(/\r/gui, '&#xD;')
+          .replace(/\n/gui, '&#xA;')
+      }
+
+      return newValue
+    },
   })
 
   return fs.promises.writeFile(filePath, xml)
@@ -72,33 +110,16 @@ function createStaticFileObjectPart (fileName, fileContents) {
 
   return {
     [xmlEntryName]: {
-      _attributes: language ? { 'language': language } : null,
-      _cdata: fileContents
-    }
+      _attributes: language ? { language } : null,
+      _cdata:      fileContents,
+    },
   }
-}
-
-function getFileExtension (fileRecord, defaultExt = '') {
-  const extensionMapping = {
-    'Velocity': '.vm',
-    'JavaScript': '.js'
-  }
-
-  if (
-    fileRecord._attributes
-    && fileRecord._attributes.language
-    && extensionMapping[fileRecord._attributes.language]
-  ) {
-    return extensionMapping[fileRecord._attributes.language]
-  }
-
-  return defaultExt
 }
 
 module.exports = {
-  writeNewXML,
-  getXMLContents,
-  getXmlMainSections,
+  getXmlTheme,
+  getXmlWidgets,
+  writeNewWidgetXML,
+  writeNewThemeXML,
   createStaticFileObjectPart,
-  getFileExtension
 }

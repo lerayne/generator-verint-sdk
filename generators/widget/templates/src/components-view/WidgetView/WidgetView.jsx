@@ -1,6 +1,8 @@
 import React, { useContext } from 'react'
-import css from './WidgetView.scss'
+
 import { ConfigContext } from '../../constants/ConfigContext'
+
+import css from './WidgetView.scss'
 
 export default function WidgetView () {
   const { originUrl, config, lang } = useContext(ConfigContext)
@@ -9,5 +11,5 @@ export default function WidgetView () {
     <div className={css.main}>
       text value: {config.testTextField}
     </div>
-  )
+  ) 
 }

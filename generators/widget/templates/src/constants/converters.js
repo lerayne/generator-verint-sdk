@@ -33,5 +33,5 @@ const CONVERTERS = [
 export default CONVERTERS
 
 export {
-  CONVERTERS
+  CONVERTERS, 
 }
