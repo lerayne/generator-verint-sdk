@@ -19,6 +19,8 @@ const PATH_WIDGET_FILES = 'verint/filestorage/defaultwidgets'
 
 const PATH_WIDGETS = 'verint/filestorage/defaultwidgets'
 
+const PATH_EMBEDDABLE_FILES = 'verint/embeddables/fd'
+
 module.exports = {
   PATH_THEME_DEFINITIONS,
   PATH_THEME_FILES_FD,
@@ -26,4 +28,5 @@ module.exports = {
   PATH_WIDGET_FILES,
   PATH_WIDGETS,
   PATH_THEME_LAYOUTS,
+  PATH_EMBEDDABLE_FILES,
 }

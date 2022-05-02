@@ -304,11 +304,11 @@ module.exports = class VerintWidget extends BaseGenerator {
         }
       }
 
-      // 2) create static files
-      // in react scenario contentScript.vm.ejs and configuration.xml are created later
+      // 2) create empty static files
+      // in react scenario contentScript.vm and configuration.xml are created later
       const finalStaticFiles = (framework === 'react')
         ? staticFiles
-        : ['contentScript.vm.ejs', ...staticFiles]
+        : ['contentScript.vm', ...staticFiles]
 
       finalStaticFiles.forEach(fileName => {
         const filePartial = createStaticFileObjectPart(fileName, '')
