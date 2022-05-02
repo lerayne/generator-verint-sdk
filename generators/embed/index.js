@@ -219,14 +219,20 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
         }
       }
 
+      let staticFiles = Object.values(embedStaticFiles)
+
       // 2) create empty static files
       // in react scenario contentScript.vm and configuration.xml are created later
       if (framework !== 'react') {
-        ['contentScript.vm', 'configuration.xml'].forEach(fileName => {
-          const filePartial = createStaticFileObjectPart(fileName, '')
-          embedXmlObject = { ...embedXmlObject, ...filePartial }
+        staticFiles = staticFiles.filter(fileName => {
+          return !['configuration.xml', 'contentScript.vm'].includes(fileName)
         })
       }
+
+      staticFiles.forEach(fileName => {
+        const filePartial = createStaticFileObjectPart(fileName, '')
+        embedXmlObject = { ...embedXmlObject, ...filePartial }
+      })
 
       this.inputData.embedConfig = embedXmlObject
     }
