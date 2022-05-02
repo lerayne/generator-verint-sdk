@@ -2,8 +2,9 @@
 const path = require('path')
 const fs = require('fs')
 
-const { getXmlWidgets } = require('./xml')
+const { getXmlEmbeddable } = require('./xml')
 const { widgetSafeName } = require('./utils')
+const { PATH_EMBEDDABLES } = require('./constants/paths')
 
 /**
  * Reads file structure of "verint" folder and gets widgets with their paths and metadata for
@@ -11,20 +12,14 @@ const { widgetSafeName } = require('./utils')
  * @param projectTypeName
  * @returns {*[]}
  */
-exports.getProjectInfo = function getProjectInfo (projectTypeName = 'defaultwidgets') {
-  const verintDir = path.join('verint', 'filestorage')
-  const widgetsRoot = path.join(verintDir, projectTypeName)
-
-  if (!fs.existsSync(widgetsRoot)) return [] 
-
-  // temp: so far we only know how to deal with "defaultwidgets"
-  if (projectTypeName !== 'defaultwidgets') return []
+exports.getProjectInfo = function getProjectInfo () {
+  if (!fs.existsSync(PATH_EMBEDDABLES)) return []
 
   // managing providers
-  const providersRootContents = fs.readdirSync(widgetsRoot)
+  const providersRootContents = fs.readdirSync(PATH_EMBEDDABLES)
 
   const providerIdsList = providersRootContents.filter(entryName => (
-    fs.lstatSync(path.join(widgetsRoot, entryName)).isDirectory()
+    fs.lstatSync(path.join(PATH_EMBEDDABLES, entryName)).isDirectory()
   ))
 
   if (providerIdsList.length > 1) {
@@ -32,23 +27,22 @@ exports.getProjectInfo = function getProjectInfo (projectTypeName = 'defaultwidg
   }
 
   // reading widgets
-  const widgetDirPath = path.join(widgetsRoot, providerIdsList[0])
-  const widgetDirContents = fs.readdirSync(widgetDirPath)
+  const embedDirPath = path.join(PATH_EMBEDDABLES, providerIdsList[0])
+  const embedDirContents = fs.readdirSync(embedDirPath)
 
-  const widgetXMLs = widgetDirContents.filter(fileName => fileName.match(/^[a-f\d]{32}\.xml$/iu))
+  const embedXMLs = embedDirContents.filter(fileName => fileName.match(/^[a-f\d]{32}\.xml$/iu))
 
-  return widgetXMLs.map(xmlFileName => {
-    const [mainSection]  = getXmlWidgets(path.join(widgetDirPath, xmlFileName))
+  return embedXMLs.map(xmlFileName => {
+    const mainSection  = getXmlEmbeddable(path.join(embedDirPath, xmlFileName))
 
     return (!mainSection)
       ? null
       : {
         folderInstanceId: xmlFileName.replace(/.xml/iu, ''),
         xmlFileName,
-        widgetsFolder:    widgetDirPath,
+        widgetsFolder:    embedDirPath,
         xmlMeta:          mainSection._attributes,
-        requiredContext:  mainSection.requiredContext || null,
         safeName:         widgetSafeName(mainSection._attributes.name),
       }
-  }).filter(widget => !!widget)
+  }).filter(embed => !!embed)
 }

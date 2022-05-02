@@ -12,7 +12,7 @@ const validateEmail = require('../../src/validators/validateEmail')
 const { getXmlEmbeddable, createStaticFileObjectPart, writeNewEmbedXML } = require('../../src/xml')
 const { getLastModified } = require('../../src/utils')
 const { ifCreatePath } = require('../../src/filesystem')
-const { PATH_EMBEDDABLE_FILES } = require('../../src/constants/paths')
+const { PATH_EMBEDDABLES } = require('../../src/constants/paths')
 const { writeAttachments, writeStatics } = require('../../src/filesystem-generator')
 const { embedStaticFiles } = require('../../src/constants/global')
 
@@ -261,8 +261,7 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
       ])
     }
 
-    // these have "if not exists" inside, so OK
-    const embedsPath = ifCreatePath(this.destinationPath(), PATH_EMBEDDABLE_FILES)
+    const embedsPath = ifCreatePath(this.destinationPath(), PATH_EMBEDDABLES)
 
     this._processEmbedDefinition(this.inputData.embedConfig, embedsPath)
   }
