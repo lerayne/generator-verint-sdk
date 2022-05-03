@@ -10,7 +10,7 @@ const BaseGenerator = require('../../src/BaseGenerator')
 const validateProjectName = require('../../src/validators/validateProjectName')
 const validateEmail = require('../../src/validators/validateEmail')
 const { getXmlEmbeddable, createStaticFileObjectPart, writeNewEmbedXML } = require('../../src/xml')
-const { getLastModified } = require('../../src/utils')
+const { getLastModified, widgetSafeName } = require('../../src/utils')
 const { ifCreatePath } = require('../../src/filesystem')
 const { PATH_EMBEDDABLES } = require('../../src/constants/paths')
 const { writeAttachments, writeStatics } = require('../../src/filesystem-generator')
@@ -224,10 +224,10 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
       // 2) create empty static files
       // in react scenario contentScript.vm and configuration.xml are created later
       if (framework !== 'react') {
-        staticFiles = staticFiles.filter(fileName => {
-          return !['configuration.xml', 'contentScript.vm'].includes(fileName)
-        })
-      }
+        staticFiles = staticFiles.filter(fileName => (
+          !['configuration.xml', 'contentScript.vm'].includes(fileName)
+        ))
+      } 
 
       staticFiles.forEach(fileName => {
         const filePartial = createStaticFileObjectPart(fileName, '')
@@ -239,7 +239,7 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
   }
 
   writing () {
-    const { mode, framework } = this.answers
+    const { mode, framework, embedName } = this.answers
 
     if (['new', 'convert'].includes(mode)) {
       this._copyWithRename('', '', [
@@ -270,6 +270,40 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
     const embedsPath = ifCreatePath(this.destinationPath(), PATH_EMBEDDABLES)
 
     this._processEmbedDefinition(this.inputData.embedConfig, embedsPath)
+
+    if (framework === 'react' && ['new'].includes(mode)) {
+      this._copyFiles('src', 'src', [
+        'shared/',
+        'components-configuration/',
+        'components-view/',
+        'constants/',
+        'statics/configuration.xml',
+        'configuration.jsx',
+        'view.jsx',
+      ])
+
+      const targetEmbedPath = path.join(
+        PATH_EMBEDDABLES,
+        '00000000000000000000000000000000',
+        this.inputData.embedConfig._attributes.id
+      )
+
+      this._copyFiles('verint', targetEmbedPath, ['configuration-helpers.vm'])
+
+      const safeName = widgetSafeName(embedName)
+
+      this.fs.copyTpl(
+        this.templatePath('verint/configuration.vm.ejs'),
+        this.destinationPath(`${targetEmbedPath}/configuration.vm`),
+        { safeName }
+      )
+
+      this.fs.copyTpl(
+        this.templatePath('src/statics/contentScript.vm.ejs'),
+        this.destinationPath('src/statics/contentScript.vm'),
+        { safeName }
+      )
+    }
   }
 
   end () {

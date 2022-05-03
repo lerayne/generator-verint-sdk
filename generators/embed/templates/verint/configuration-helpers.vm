@@ -1,0 +1,49 @@
+#*
+  property attributes:
+    * disableClickOutsideModal: bool
+    * hideSaveButton: bool
+*#
+
+## template unique id
+#set($templateId = $context_v2_propertyTemplate.UniqueId)
+
+## template attributes passed as XML props
+#set($options = $context_v2_propertyTemplate.Property.Options)
+
+## template wrapper
+#set($wrapper = "${templateId}_wrapper")
+
+## get 'disableClickOutsideModal' attribute value
+#set($disableClickOutsideModal = "")
+#set($disableClickOutsideModal = $options.Get("disableClickOutsideModal"))
+
+## get 'hideSaveButton' attribute value
+#set($hideSaveButton = "")
+#set($hideSaveButton = $options.Get("hideSaveButton"))
+
+## hide template
+<style> #$wrapper { display: none; } </style>
+
+## hide save button
+#if($hideSaveButton == "true")
+  <style>
+    li.field-item.save-form {
+      height: 0 !important;
+      overflow: hidden !important;
+      display: block !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+  </style>
+#end
+
+## disable click outside modal
+#if($disableClickOutsideModal == "true")
+<script type="text/javascript">
+  jQuery(function() {
+    // prevent closing modal window when clicking outside
+    jQuery("#$wrapper").closest('div.modal').off()
+    jQuery("#$wrapper").closest('div.glow-scrollable').off()
+  })
+</script>
+#end
