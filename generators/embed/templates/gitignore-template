@@ -15,10 +15,7 @@ distrib/
 devServer/
 
 #verint-specific destination directory
-verint/filestorage/defaultwidgets/**/bundle-*
-
-#built files should not be added into git
-statics/attachments/bundle-*
+verint/filestorage/embeddables/fd/**/bundle-*
 
 # Node artifact files
 node_modules/
