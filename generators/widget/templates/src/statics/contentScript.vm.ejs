@@ -38,7 +38,7 @@
 <script type="text/javascript" src="$jsViewLink"></script>
 
 ## entry point (on load event for react app)
-<script>
+<script type="text/javascript" id="<%= widgetSafeName %>_configuration">
   jQuery(function() {
   	// get any file's and remove the file ending to get root URL of the widget
     const attachmentsRootUrl = '$anyFileURL'.split('/').slice(0, -1).join('/')

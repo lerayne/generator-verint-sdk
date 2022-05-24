@@ -36,14 +36,14 @@
 <script type="text/javascript" src="$jsConfigLink"></script>
 
 ## entry point (on load event for react app)
-<script type="text/javascript" id="<%= widgetSafeName %>_configuration">
+<script type="text/javascript" id="<%= safeName %>_configuration">
   jQuery(function() {
     // get any file's and remove the file ending to get root URL of the widget
     const attachmentsRootUrl = '$anyFileURL'.split('/').slice(0, -1).join('/')
 
     let api = $context_v2_propertyTemplate.JsonApi;
 
-    jQuery.telligent.evolution.widgets['<%= widgetSafeName %>'].configuration.register({
+    jQuery.telligent.evolution.widgets['<%= safeName %>'].configuration.register({
       widgetId: '$templateId',
       configJSONText: '$value',
       attachmentsRootUrl: attachmentsRootUrl,

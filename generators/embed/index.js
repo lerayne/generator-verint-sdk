@@ -191,7 +191,7 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
       })
     }
 
-    // getting base widget configs from template/given file
+    // getting base embeddable configs from template/given file
     this.inputData.embedConfig = getXmlEmbeddable(
       mode === 'convert'
         ? this.destinationPath(filePath)
@@ -202,6 +202,7 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
       // 1) Set attributes
       let embedXmlObject = this.inputData.embedConfig
 
+      // set name, last modified date and generate new id
       embedXmlObject._attributes = {
         ...embedXmlObject._attributes,
         name:         embedName,
@@ -219,9 +220,9 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
         }
       }
 
+      // 2) create empty static files
       let staticFiles = Object.values(embedStaticFiles)
 
-      // 2) create empty static files
       // in react scenario contentScript.vm and configuration.xml are created later
       if (framework !== 'react') {
         staticFiles = staticFiles.filter(fileName => (

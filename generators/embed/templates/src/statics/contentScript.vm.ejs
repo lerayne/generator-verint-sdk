@@ -38,13 +38,13 @@
 <script type="text/javascript" src="$jsViewLink"></script>
 
 ## entry point (on load event for react app)
-<script>
+<script type="text/javascript" id="<%= safeName %>_view">
   jQuery(function() {
   	// get any file's and remove the file ending to get root URL of the widget
     const attachmentsRootUrl = '$anyFileURL'.split('/').slice(0, -1).join('/')
 
     // set JS variables for widget
-    jQuery.telligent.evolution.widgets['<%= widgetSafeName %>'].view.register({
+    jQuery.telligent.evolution.widgets['<%= safeName %>'].view.register({
       widgetId: '$widgetId',
       configJSONText: '$configJSONText',
       wrapperElementId: '$core_v2_widget.WrapperElementId',
