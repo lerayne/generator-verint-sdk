@@ -3,7 +3,6 @@ const fs = require('fs')
 const path = require('path')
 
 const execa = require('execa')
-
 const { v4: uuidv4 } = require('uuid')
 
 const BaseGenerator = require('../../src/BaseGenerator')
@@ -29,6 +28,7 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
 
   // eslint-disable-next-line max-lines-per-function
   async prompting () {
+    // getting current folder name
     const pathChunks = this.env.cwd.split(path.sep)
     const folderName = pathChunks[pathChunks.length - 1]
 
@@ -108,7 +108,8 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
         'when':     answers => ['new', 'add'].includes(answers.mode),
       },
 
-      // React or not
+      // React or not.
+      // Not available if converting
       {
         'type':    'list',
         'name':    'framework',
@@ -156,9 +157,17 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
         'when':    answers => answers.configureNow,
       },
 
-      // todo: icons and previews
+      // embed category
+      {
+        'type':    'input',
+        'name':    'embedCategory',
+        'message': 'Do you want to categorize this embeddable? (leave empty if you don\'t)',
+        'default': '',
+        'when':    answers => answers.configureNow,
+      },
 
       // todo: embed restriction by RTE type
+      // types are expressed as UUIDs. Are they the same for every instance?
     ])
   }
 
@@ -173,6 +182,7 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
       embedName,
       configureNow,
       embedConfig,
+      embedCategory,
     } = this.answers
 
     // only on "new" or "convert"
@@ -191,7 +201,7 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
       })
     }
 
-    // getting base embeddable configs from template/given file
+    // getting base embeddable config from template/given file
     this.inputData.embedConfig = getXmlEmbeddable(
       mode === 'convert'
         ? this.destinationPath(filePath)
@@ -217,10 +227,14 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
           ...embedXmlObject._attributes,
           isCacheable:     embedConfig && embedConfig.includes('isCacheable').toString(),
           varyCacheByUser: embedConfig && embedConfig.includes('varyCacheByUser').toString(),
+          category:        embedCategory.trim(),
         }
       }
 
       // 2) create empty static files
+      // configuration.xml
+      // contentScript.vm
+      // languageResources.xml
       let staticFiles = Object.values(embedStaticFiles)
 
       // in react scenario contentScript.vm and configuration.xml are created later
@@ -243,6 +257,7 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
     const { mode, framework, embedName } = this.answers
 
     if (['new', 'convert'].includes(mode)) {
+      // root folder
       this._copyWithRename('', '', [
         [(framework === 'react' ? 'gulpfile-react.js' : 'gulpfile.js'), 'gulpfile.js'],
         ['nvmrc-template', '.nvmrc'],
@@ -260,6 +275,7 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
         this._copyFiles('', '', ['webpack.config.js'])
       }
 
+      // utils and constants that are common for all generators and also copied to the project
       this._copyFiles('../../../src', 'build-scripts', [
         'constants/',
         'utils.js',
@@ -270,9 +286,12 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
 
     const embedsPath = ifCreatePath(this.destinationPath(), PATH_EMBEDDABLES)
 
+    // creates files and folders based on the config formed by external XML or user's choice in
+    // prompt section
     this._processEmbedDefinition(this.inputData.embedConfig, embedsPath)
 
     if (framework === 'react' && ['new'].includes(mode)) {
+      // source file templates
       this._copyFiles('src', 'src', [
         'shared/',
         'components-configuration/',
@@ -289,6 +308,7 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
         this.inputData.embedConfig._attributes.id
       )
 
+      // velocity templates for react-based custom configuration
       this._copyFiles('verint', targetEmbedPath, ['configuration-helpers.vm'])
 
       const safeName = widgetSafeName(embedName)
@@ -299,6 +319,7 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
         { safeName }
       )
 
+      // velocity template for react-based view
       this.fs.copyTpl(
         this.templatePath('src/statics/contentScript.vm.ejs'),
         this.destinationPath('src/statics/contentScript.vm'),
