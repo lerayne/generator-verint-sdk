@@ -7,7 +7,7 @@
 
   <!--
   helper styles and scripts:
-  one - that hides stock "save" button so we can draw our own
+  one - that hides stock "save" button so that we can draw our own
   two - that prevents accidental closing of config panel by off-click
   -->
   <property template="configuration-helpers.vm" disableClickOutsideModal="true" hideSaveButton="true" />

@@ -1,4 +1,6 @@
-## getting config panel ID for futher use
+## getting config panel ID for further use
+## for some reason here we use "propertyTemplate" API instead of widget. And apparently we do that
+## for widgets too, not only for embeddables
 #set($templateId = $context_v2_propertyTemplate.UniqueId)
 
 ## getting config object
@@ -6,7 +8,7 @@
 #set($value = $core_v2_encoding.JavascriptEncode($context_v2_propertyTemplate.Value))
 
 ## Attachment files URLs can't be used as is - they're generated 
-##  dynamically, so we have to get them with this kind of request
+## dynamically, so we have to get them with this kind of request
 #set($cssConfigLink = $core_v2_widget.GetFileUrl('bundle-configuration.css'))
 
 ## fix issue with HTML escaped css URL
@@ -21,7 +23,6 @@
 
 ## registering some vars for future use in JS initializer
 #set($anyFileURL = $core_v2_widget.GetFileUrl('bundle-configuration.js'))
-
 
 ## Widget config HTML starts here
 
@@ -47,8 +48,9 @@
       widgetId: '$templateId',
       configJSONText: '$value',
       attachmentsRootUrl: attachmentsRootUrl,
+      langCode: "$core_v2_language.CodeAndLocale",
       lang: {
-
+        vangVar1: "$core_v2_encoding.JavascriptEncode($core_v2_language.GetResource('resource-name-1'))",
       },
       onSaveJSONText: function (newConfigJSONText) {
         api.register({
