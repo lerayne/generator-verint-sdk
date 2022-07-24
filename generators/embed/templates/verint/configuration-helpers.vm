@@ -27,7 +27,7 @@
 ## hide save button
 #if($hideSaveButton == "true")
   <style>
-    li.field-item.save-form {
+    .modal-content > div > div > fieldset.field-list {
       height: 0 !important;
       overflow: hidden !important;
       display: block !important;

@@ -1,7 +1,7 @@
 ## getting config panel ID for further use
 ## for some reason here we use "propertyTemplate" API instead of widget. And apparently we do that
 ## for widgets too, not only for embeddables
-#set($templateId = $context_v2_propertyTemplate.UniqueId)
+#set($embedConfigId = $context_v2_propertyTemplate.UniqueId)
 
 ## getting config object
 #set($value = '{}')
@@ -27,7 +27,7 @@
 ## Widget config HTML starts here
 
 ## root container to render ($-variables are replaced with their actual values by Velocity)
-<div id="$templateId"></div>
+<div id="$embedConfigId"></div>
 
 ## main stylesheet
 <link rel="stylesheet" href="$cssConfigLink" type="text/css" />
@@ -45,7 +45,7 @@
     let api = $context_v2_propertyTemplate.JsonApi;
 
     jQuery.telligent.evolution.widgets['<%= safeName %>'].configuration.register({
-      widgetId: '$templateId',
+      embedConfigId: '$embedConfigId',
       configJSONText: '$value',
       attachmentsRootUrl: attachmentsRootUrl,
       langCode: "$core_v2_language.CodeAndLocale",

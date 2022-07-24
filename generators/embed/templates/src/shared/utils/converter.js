@@ -1,4 +1,4 @@
-/* global WIDGET_SAFE_NAME */
+/* global EMBED_SAFE_NAME */
 import deepExtend from 'deep-extend'
 
 function jsonCopy (obj) {
@@ -47,24 +47,24 @@ async function convertSchema (currentConfig = {}, defaultConfig, converters) {
   let type // possible values: 'up' | 'down'
 
   if (currentRevision === targetRevision) {
-    console.log(`${WIDGET_SAFE_NAME}: same schema revisions, no need to convert`)
+    console.log(`${EMBED_SAFE_NAME}: same schema revisions, no need to convert`)
     return currentConfig
   }
 
   // if converters are empty - nothing to convert
   if (!converters || !converters.length) {
-    console.warn(`${WIDGET_SAFE_NAME}: schema revisions don't match, but no converters defined. Skipping conversion`)
+    console.warn(`${EMBED_SAFE_NAME}: schema revisions don't match, but no converters defined. Skipping conversion`)
     return currentConfig
   }
 
   if (targetRevision > currentRevision) {
     type = 'up'
-    console.info(`${WIDGET_SAFE_NAME}: upgrading schema from`, currentRevision, 'to', targetRevision)
+    console.info(`${EMBED_SAFE_NAME}: upgrading schema from`, currentRevision, 'to', targetRevision)
   }
 
   if (targetRevision < currentRevision) {
     type = 'down'
-    console.info(`${WIDGET_SAFE_NAME}: downgrading from`, currentRevision, 'to', targetRevision)
+    console.info(`${EMBED_SAFE_NAME}: downgrading from`, currentRevision, 'to', targetRevision)
   }
 
   // Step 4: queueing the converters
@@ -75,7 +75,7 @@ async function convertSchema (currentConfig = {}, defaultConfig, converters) {
       if (converters[i] && converters[i].upgradeTo) {
         queue.push(converters[i].upgradeTo)
       } else {
-        console.warn(`${WIDGET_SAFE_NAME}: no converter, or no "upgradeTo" scenario was found for the specified revision ${i}. Skipping conversion`)
+        console.warn(`${EMBED_SAFE_NAME}: no converter, or no "upgradeTo" scenario was found for the specified revision ${i}. Skipping conversion`)
         return currentConfig
       }
     }
@@ -86,14 +86,14 @@ async function convertSchema (currentConfig = {}, defaultConfig, converters) {
       if (converters[i] && converters[i].downgradeFrom) {
         queue.push(converters[i].downgradeFrom)
       } else {
-        console.warn(`${WIDGET_SAFE_NAME}: no converter, or no "downgradeFrom" scenario was found for the specified revision ${i}. Skipping conversion`)
+        console.warn(`${EMBED_SAFE_NAME}: no converter, or no "downgradeFrom" scenario was found for the specified revision ${i}. Skipping conversion`)
         return currentConfig
       }
     }
   }
 
   if (queue.length === 0) {
-    console.warn(`${WIDGET_SAFE_NAME}: schema revisions don't match, but no converters queued. Skipping conversion`)
+    console.warn(`${EMBED_SAFE_NAME}: schema revisions don't match, but no converters queued. Skipping conversion`)
     return currentConfig
   }
 

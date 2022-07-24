@@ -16,7 +16,7 @@ const { getProjectInfo } = require('./build-scripts/getProjectInfo')
 // we need variables from package.json and verint-specific widget.json that defines the widget
 const PACKAGE_JSON = JSON.parse(fs.readFileSync('./package.json'))
 
-const WIDGETS = getProjectInfo('defaultwidgets')
+const EMBEDS = getProjectInfo()
 
 function generateOptions (env) {
   const PROD = env.mode !== 'development'
@@ -32,13 +32,13 @@ function generatePlugins (widgetConfig, env) {
   const { DEV, PROD } = generateOptions(env)
 
   const definePluginConfig = {
-    PACKAGE_NAME:     JSON.stringify(PACKAGE_JSON.name),
-    PACKAGE_VERSION:  JSON.stringify(PACKAGE_JSON.version),
-    WIDGET_NAME:      JSON.stringify(widgetConfig.xmlMeta.name),
-    WIDGET_SAFE_NAME: JSON.stringify(widgetConfig.safeName),
+    PACKAGE_NAME:    JSON.stringify(PACKAGE_JSON.name),
+    PACKAGE_VERSION: JSON.stringify(PACKAGE_JSON.version),
+    EMBED_NAME:      JSON.stringify(widgetConfig.xmlMeta.name),
+    EMBED_SAFE_NAME: JSON.stringify(widgetConfig.safeName),
   }
 
-  console.log('define plugin =', definePluginConfig)
+  console.log('define plug in =', definePluginConfig)
 
   const plugins = [
     new BundleAnalyzerPlugin({
@@ -232,10 +232,10 @@ module.exports = function webpackConfig (env = {}) {
     }
   }
 
-  return WIDGETS.map(widgetConfig => createConfig(widgetConfig, {
+  return EMBEDS.map(widgetConfig => createConfig(widgetConfig, {
     entry: {
-      view:          path.join(__dirname, 'src', widgetConfig.safeName, 'view.jsx'),
-      configuration: path.join(__dirname, 'src', widgetConfig.safeName, 'configuration.jsx'),
+      view:          path.join(__dirname, 'src', 'view.jsx'),
+      configuration: path.join(__dirname, 'src', 'configuration.jsx'),
     },
     output: {
       path:       path.join(__dirname, widgetConfig.widgetsFolder, widgetConfig.folderInstanceId),

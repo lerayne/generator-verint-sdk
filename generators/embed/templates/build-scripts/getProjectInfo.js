@@ -18,6 +18,7 @@ exports.getProjectInfo = function getProjectInfo () {
   // managing providers
   const providersRootContents = fs.readdirSync(PATH_EMBEDDABLES)
 
+  //getting providers IDs (presented as folders in PATH_EMBEDDABLES)
   const providerIdsList = providersRootContents.filter(entryName => (
     fs.lstatSync(path.join(PATH_EMBEDDABLES, entryName)).isDirectory()
   ))
@@ -26,10 +27,11 @@ exports.getProjectInfo = function getProjectInfo () {
     throw new Error('We don\'t have build scripts for more than 1 provider in a project')
   }
 
-  // reading widgets
+  // reading embed(s) of provider 0
   const embedDirPath = path.join(PATH_EMBEDDABLES, providerIdsList[0])
   const embedDirContents = fs.readdirSync(embedDirPath)
 
+  // get only XMLs
   const embedXMLs = embedDirContents.filter(fileName => fileName.match(/^[a-f\d]{32}\.xml$/iu))
 
   return embedXMLs.map(xmlFileName => {
