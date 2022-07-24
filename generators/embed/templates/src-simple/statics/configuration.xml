@@ -1,0 +1,3 @@
+<propertyGroup id="options" labelResourceName="Configuration_Options">
+    <property id="message" labelResourceName="Content" dataType="string" />
+</propertyGroup>

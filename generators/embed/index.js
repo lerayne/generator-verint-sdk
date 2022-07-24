@@ -210,7 +210,7 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
 
     if (['new'].includes(mode)) {
       // 1) Set attributes
-      let embedXmlObject = this.inputData.embedConfig
+      const embedXmlObject = this.inputData.embedConfig
 
       // set name, last modified date and generate new id
       embedXmlObject._attributes = {
@@ -230,24 +230,6 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
           category:        embedCategory.trim(),
         }
       }
-
-      // 2) create empty static files
-      // configuration.xml
-      // contentScript.vm
-      // languageResources.xml
-      let staticFiles = Object.values(embedStaticFiles)
-
-      // in react scenario contentScript.vm and configuration.xml are created later
-      if (framework !== 'react') {
-        staticFiles = staticFiles.filter(fileName => (
-          !['configuration.xml', 'contentScript.vm'].includes(fileName)
-        ))
-      } 
-
-      staticFiles.forEach(fileName => {
-        const filePartial = createStaticFileObjectPart(fileName, '')
-        embedXmlObject = { ...embedXmlObject, ...filePartial }
-      })
 
       this.inputData.embedConfig = embedXmlObject
     }
@@ -290,46 +272,56 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
     // prompt section
     this._processEmbedDefinition(this.inputData.embedConfig, embedsPath)
 
-    if (framework === 'react' && ['new'].includes(mode)) {
-      // source file templates
-      this._copyFiles('src', 'src', [
-        'shared/',
-        'components-configuration/',
-        'components-view/',
-        'constants/',
-        'statics/configuration.xml',
-        'configuration.jsx',
-        'view.jsx',
-      ])
+    if (['new'].includes(mode)) {
+      if (framework !== 'react') {
+        this._copyFiles('src-simple', 'src', [
+          'statics/',
+        ])
+      } else {
+        // source file templates
+        this._copyFiles('src', 'src', [
+          'shared/',
+          'components-configuration/',
+          'components-view/',
+          'constants/',
+          'statics/configuration.xml',
+          'statics/languageResources.xml',
+          'configuration.jsx',
+          'view.jsx',
+        ])
 
-      const targetEmbedPath = path.join(
-        PATH_EMBEDDABLES,
-        '00000000000000000000000000000000',
-        this.inputData.embedConfig._attributes.id
-      )
+        const targetEmbedPath = path.join(
+          PATH_EMBEDDABLES,
+          '00000000000000000000000000000000',
+          this.inputData.embedConfig._attributes.id
+        )
 
-      // velocity templates for react-based custom configuration
-      this._copyFiles('verint', targetEmbedPath, ['configuration-helpers.vm'])
+        // velocity templates for react-based custom configuration
+        this._copyFiles('verint', targetEmbedPath, ['configuration-helpers.vm'])
 
-      const safeName = widgetSafeName(embedName)
+        const safeName = widgetSafeName(embedName)
 
-      this.fs.copyTpl(
-        this.templatePath('verint/configuration.vm.ejs'),
-        this.destinationPath(`${targetEmbedPath}/configuration.vm`),
-        { safeName }
-      )
+        this.fs.copyTpl(
+          this.templatePath('verint/configuration.vm.ejs'),
+          this.destinationPath(`${targetEmbedPath}/configuration.vm`),
+          { safeName }
+        )
 
-      // velocity template for react-based view
-      this.fs.copyTpl(
-        this.templatePath('src/statics/contentScript.vm.ejs'),
-        this.destinationPath('src/statics/contentScript.vm'),
-        { safeName }
-      )
+        // velocity template for react-based view
+        this.fs.copyTpl(
+          this.templatePath('src/statics/contentScript.vm.ejs'),
+          this.destinationPath('src/statics/contentScript.vm'),
+          { safeName }
+        )
+      }
     }
   }
 
   end () {
     this.log('FINISHED!')
+    if (this.answers.mode === 'convert') {
+      this.log(`You may now delete the source file: ${this.answers.filePath}`)
+    }
   }
 
   _validateEmbedName (value, _answers) {
