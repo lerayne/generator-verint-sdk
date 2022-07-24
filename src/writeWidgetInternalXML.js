@@ -27,13 +27,13 @@ exports.writeWidgetInternalXML = function writeWidgetInternalXML (
     },
   }
 
-  const staticFilesDir = path.join(staticsPath, providerId, widgetId)
-  const staticsFileList = fs.readdirSync(staticFilesDir)
+  //const staticFilesDir = path.join(staticsPath, providerId, widgetId)
+  const staticsFileList = fs.readdirSync(staticsPath)
 
   for (const fileName of staticsFileList) {
     const filePartial = createStaticFileObjectPart(
       fileName,
-      fs.readFileSync(path.join(staticFilesDir, fileName), { encoding: 'utf8' })
+      fs.readFileSync(path.join(staticsPath, fileName), { encoding: 'utf8' })
     )
 
     newWidgetXmlObject = { ...newWidgetXmlObject, ...filePartial }
