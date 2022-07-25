@@ -147,8 +147,11 @@ module.exports = class VerintWidget extends BaseGenerator {
           // React project - we don't have an option to add a React widget to it
           if (
             answers.mode === 'add'
-            && this.inputData.existingPackageJson.keywords
-            && !this.inputData.existingPackageJson.keywords.includes('react')
+            && (
+              // allow if there's no keywords, OR keywords don't include 'react'
+              !this.inputData.existingPackageJson.keywords
+              || !this.inputData.existingPackageJson.keywords.includes('react')
+            )
           ) return false
 
           return ['new', 'add'].includes(answers.mode)
@@ -166,20 +169,10 @@ module.exports = class VerintWidget extends BaseGenerator {
         name:    'staticFiles',
         message: 'Select the additional files you need for this widget '
           + '(leave as is if you\'re not sure)',
-        choices: answers => {
-          const staticFiles = [
-            { value: 'additionalCssScript.vm', checked: false },
-            { value: 'headerScript.vm', checked: false },
-            { value: 'languageResources.xml', checked: true },
-          ]
-
-          // if framework is React - configuration is not optional, it's always added
-          if (answers.framework !== 'react') {
-            staticFiles.push({ value: 'configuration.xml', checked: true })
-          }
-
-          return staticFiles
-        },
+        choices: [
+          { value: 'additionalCssScript.vm', checked: false },
+          { value: 'headerScript.vm', checked: false },
+        ],
         when: answers => ['new', 'add'].includes(answers.mode),
       },
 
@@ -304,13 +297,9 @@ module.exports = class VerintWidget extends BaseGenerator {
         }
       }
 
-      // 2) create empty static files
-      // in react scenario contentScript.vm and configuration.xml are created later
-      const finalStaticFiles = (framework === 'react')
-        ? staticFiles
-        : ['contentScript.vm', ...staticFiles]
-
-      finalStaticFiles.forEach(fileName => {
+      // creating empty static files of those selected in 'prompting' stage (additionalCssScript and
+      // headerScript). Other files are being created in mandatory way in 'writing' stage
+      staticFiles.forEach(fileName => {
         const filePartial = createStaticFileObjectPart(fileName, '')
         widgetXmlObject = { ...widgetXmlObject, ...filePartial }
       })
@@ -367,43 +356,49 @@ module.exports = class VerintWidget extends BaseGenerator {
       )
     )
 
-    if (framework === 'react' && ['new', 'add'].includes(mode)) {
+    if (['new', 'add'].includes(mode)) {
       const safeName = widgetSafeName(widgetName)
 
-      this._copyFiles('src/shared/utils', 'src/shared/utils', [
-        'asyncUtils.js',
-        'converter.js',
-        'verintEnv.js',
-        'verintNetwork.js',
-      ])
-      this._copyFiles('src', `src/${safeName}`, [
-        'components-configuration/',
-        'components-view/',
-        'constants/',
-        'statics/configuration.xml',
-        'configuration.jsx',
-        'view.jsx',
-      ])
+      if (framework !== 'react') {
+        // copy sample static files for simplest widget
+        this._copyFiles('src-simple', `src/${safeName}`, ['statics/'])
+      } else {
 
-      const targetWidgetPath = path.join(
-        PATH_WIDGET_FILES,
-        '00000000000000000000000000000000',
-        this.inputData.widgetConfigs[0]._attributes.instanceIdentifier
-      )
+        this._copyFiles('src/shared/utils', 'src/shared/utils', [
+          'asyncUtils.js',
+          'converter.js',
+          'verintEnv.js',
+          'verintNetwork.js',
+        ])
+        this._copyFiles('src', `src/${safeName}`, [
+          'components-configuration/',
+          'components-view/',
+          'constants/',
+          'statics/configuration.xml',
+          'configuration.jsx',
+          'view.jsx',
+        ])
 
-      this._copyFiles('verint', targetWidgetPath, ['configuration-helpers.vm'])
+        const targetWidgetPath = path.join(
+          PATH_WIDGET_FILES,
+          '00000000000000000000000000000000',
+          this.inputData.widgetConfigs[0]._attributes.instanceIdentifier
+        )
 
-      this.fs.copyTpl(
-        this.templatePath('verint/configuration.vm.ejs'),
-        this.destinationPath(`${targetWidgetPath}/configuration.vm`),
-        { widgetSafeName: safeName }
-      )
+        this._copyFiles('verint', targetWidgetPath, ['configuration-helpers.vm'])
 
-      this.fs.copyTpl(
-        this.templatePath('src/statics/contentScript.vm.ejs'),
-        this.destinationPath(`src/${safeName}/statics/contentScript.vm`),
-        { widgetSafeName: safeName }
-      )
+        this.fs.copyTpl(
+          this.templatePath('verint/configuration.vm.ejs'),
+          this.destinationPath(`${targetWidgetPath}/configuration.vm`),
+          { widgetSafeName: safeName }
+        )
+
+        this.fs.copyTpl(
+          this.templatePath('src/statics/contentScript.vm.ejs'),
+          this.destinationPath(`src/${safeName}/statics/contentScript.vm`),
+          { widgetSafeName: safeName }
+        )
+      }
     }
 
     /* if (this.answers.deleteXML) {
