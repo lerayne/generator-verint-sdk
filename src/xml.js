@@ -30,6 +30,12 @@ function getXmlTheme (filePath) {
   return xmlFileContents.theme
 }
 
+function getXmlEmbeddable (filePath) {
+  const xmlFileContents = getXMLContents(filePath)
+
+  return xmlFileContents.embeddable
+}
+
 /**
  * @param widgetXmlObjects - object or an array of objects
  * @param filePath
@@ -82,6 +88,20 @@ function writeNewThemeXML (themeXmlObject, filePath) {
   return fs.promises.writeFile(filePath, xml)
 }
 
+function writeNewEmbedXML (embedXmlObject, filePath) {
+  const xml = js2xml({
+    embeddable: embedXmlObject,
+  }, {
+    compact:          true,
+    // eslint-disable-next-line no-magic-numbers
+    spaces:           2,
+    indentCdata:      true,
+    indentAttributes: true,
+  })
+
+  return fs.promises.writeFile(filePath, xml)
+}
+
 /**
  * given with a file name (eg contentScript.vm) and file contents
  * outputs an object of a form:
@@ -119,7 +139,9 @@ function createStaticFileObjectPart (fileName, fileContents) {
 module.exports = {
   getXmlTheme,
   getXmlWidgets,
+  getXmlEmbeddable,
   writeNewWidgetXML,
   writeNewThemeXML,
+  writeNewEmbedXML,
   createStaticFileObjectPart,
 }

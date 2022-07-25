@@ -1,0 +1,14 @@
+<propertyGroup id="options">
+  <!--
+  rendering the whole config panel as a single custom property template of a type "text" that
+  contains JSON object
+  -->
+  <property template="configuration.vm"  id="configuration" dataType="string" />
+
+  <!--
+  helper styles and scripts:
+  one - that hides stock "save" button so that we can draw our own
+  two - that prevents accidental closing of config panel by off-click
+  -->
+  <property template="configuration-helpers.vm" disableClickOutsideModal="true" hideSaveButton="true" />
+</propertyGroup>

@@ -1,7 +1,10 @@
-## getting widget ID for futher use
-#set($widgetId = $core_v2_widget.UniqueId('wrapper'))
+## getting widget ID for further use
+## not sure if core_v2_widget is a proper endpoint to call, but it works. Though OOTB embeddables (like
+## Tip or Navigation List) are using widget API too
+#set($embedId = $core_v2_widget.UniqueId('wrapper'))
 
 ## configuration JSON object
+## Also widget API - and again this is the way OOTB embeds are getting their config options
 #set($configJSONText = $core_v2_encoding.JavascriptEncode($core_v2_widget.GetStringValue('configuration', '')))
 
 ## Attachment files URLs can't be used as is - they're generated 
@@ -18,34 +21,35 @@
 #set($jsVendorLink = $core_v2_encoding.HtmlAttributeEncode($core_v2_widget.GetFileUrl('bundle-vendor.js')))
 #set($jsViewLink = $core_v2_encoding.HtmlAttributeEncode($core_v2_widget.GetFileUrl('bundle-view.js')))
 
-## registering some vars for future use in JS initializer
+## registering some vars for future usage in JS initializer
 #set($anyFileURL = $core_v2_widget.GetFileUrl('bundle-view.js'))
 
 
 ## Widget view HTML starts here
 
 ## root container to render ($-variables are replaced with their actual values by Velocity)
-<div id="$widgetId"></div>
+<div id="$embedId"></div>
 
 ## main stylesheet
 <link rel="stylesheet" href="$cssViewLink" type="text/css" />
 
-<link rel="preconnect" href="https://fonts.gstatic.com">
-<link href="https://fonts.googleapis.com/css2?family=Maven+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+## TODO: let's not use Google fonts for now
+##<link rel="preconnect" href="https://fonts.gstatic.com">
+##<link href="https://fonts.googleapis.com/css2?family=Maven+Pro:wght@400;600;700&display=swap" rel="stylesheet">
 
 ## main end-user script
 <script type="text/javascript" src="$jsVendorLink"></script>
 <script type="text/javascript" src="$jsViewLink"></script>
 
 ## entry point (on load event for react app)
-<script type="text/javascript" id="<%= widgetSafeName %>_configuration">
+<script type="text/javascript" id="<%= safeName %>_view">
   jQuery(function() {
   	// get any file's and remove the file ending to get root URL of the widget
     const attachmentsRootUrl = '$anyFileURL'.split('/').slice(0, -1).join('/')
 
     // set JS variables for widget
-    jQuery.telligent.evolution.widgets['<%= widgetSafeName %>'].view.register({
-      widgetId: '$widgetId',
+    jQuery.telligent.evolution.widgets['<%= safeName %>'].view.register({
+      embedId: '$embedId',
       configJSONText: '$configJSONText',
       wrapperElementId: '$core_v2_widget.WrapperElementId',
       attachmentsRootUrl: attachmentsRootUrl,

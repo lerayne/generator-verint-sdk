@@ -1,0 +1,5 @@
+#set ($content = false)
+#set ($content = $core_v2_widget.GetStringValue('message', ''))
+#if ($content)
+    <div class="message">$core_v2_encoding.HtmlEncode($content)</div>
+#end
