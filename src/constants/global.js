@@ -27,9 +27,16 @@ const widgetStaticFiles = {
   languageResources:   'languageResources.xml',
 }
 
+const embedStaticFiles = {
+  configuration:     'configuration.xml',
+  contentScript:     'contentScript.vm',
+  languageResources: 'languageResources.xml',
+}
+
 module.exports = {
   themeTypeIds,
   themeTypeFolders,
   themeStaticFiles,
   widgetStaticFiles,
+  embedStaticFiles,
 }
