@@ -45,7 +45,11 @@ function promiseFidgetFileWrites (staticsPath) {
         const widgetIdDirs = getDirsList(path.join(widgetsStaticsPath, providerId))
 
         for (const widgetId of widgetIdDirs) {
-          promises.push(writeWidgetInternalXML(widgetsStaticsPath, providerId, widgetId))
+          promises.push(writeWidgetInternalXML(
+            path.join(widgetsStaticsPath, providerId, widgetId),
+            providerId,
+            widgetId
+          ))
         }
       }
     }
