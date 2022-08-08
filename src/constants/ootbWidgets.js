@@ -129,6 +129,19 @@ const widgetProviders = [
       'fe031c8fd1fe4d5bbddbfd9014140fc8',
       'fe757b55a68043478a5014bd2d91f8db',
       'ff79be4dcc9b4884bbf9a455ef5eb1c5',
+      'c7a247aa2a404b538f8646aa0e250739', // System - Notifications
+      '71cf0046302c4e0fa4babd96f821afe2', // User - Email Verification
+      '816ef89760e6455e899486e173aeab64', // Articles - Title
+      'cd13541877a34c9fb1f31aefdd02b94b', // Articles - Browse Collections
+      '079541a203c74f01b1bddfb619cf8b13', // articles-article
+      'b3565eca7f8c46bb92870ed5b79b7b8e', // article-details
+      'd1085d188cb34433aa9a46b96a7e8807', // articles-list
+      '666bd5d2f9c64ea4bea275ac792cca0f', // article-breadcrumbs
+      'd7b8f66257c54211b0f7897bec0dc049', // article-category
+      '4ccfcb0ad16c4d97a8e532d4dd2c9b11', // article-category-list
+      '55becfb445514bc09aab76428adf7d48', // article-create-edit
+      '50932194e2cf4044aebc86009297d0a9', // articles-helpfulness
+      'cdd736ec31d64dbe94f09997dc3009f6', // article-links
     ],
   }, {
     name:      'ideation',

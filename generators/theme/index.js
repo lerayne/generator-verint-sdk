@@ -326,6 +326,8 @@ module.exports = class VerintTheme extends BaseGenerator {
                 name:  widget._attributes.name,
                 value: widget._attributes.instanceIdentifier || widget._attributes.instanceId,
               })),
+              // todo: I forgot what this additional option does. Looks like just a separator,
+              //  but for what?
               { name: '( ) ( ) ( ) ( )', value: '0', disabled: ' ' },
             ],
           },
@@ -401,6 +403,7 @@ module.exports = class VerintTheme extends BaseGenerator {
         'filesystem.js',
         'xml.js',
         'writeWidgetInternalXML.js',
+        'readWidgetToBundle.js',
       ])
     }
   }
