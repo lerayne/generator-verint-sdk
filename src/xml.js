@@ -2,11 +2,32 @@
 const fs = require('fs')
 
 const { js2xml, xml2js } = require('xml-js')
+// const xmljs = require('xml2js')
+// const { XMLParser } = require('fast-xml-parser')
 
 function getXMLContents (filePath) {
+  // console.log('1111')
   const xmlFile = fs.readFileSync(filePath, { encoding: 'utf8' })
+  // console.log('2222', xmlFile.length, xmlFile.length / 1024, xmlFile.length / (1024 * 1024))
+
   return xml2js(xmlFile, { compact: true })
 }
+
+/* async function xml2jsAsync (filePath) {
+  try {
+    console.log('1111a')
+    const xmlFile = fs.readFileSync(filePath, { encoding: 'utf8' })
+    // const parser = new xmljs.Parser({ async: true })
+    // const result = await parser.parseStringPromise(xmlFile)
+    const parser = new XMLParser()
+    const result = parser.parse(xmlFile)
+    console.log('2222a')
+    console.log('DONE', JSON.stringify(result).length)
+  } catch (ex) {
+    console.log('CUSTOM CAUGHT ERROR')
+    console.error(ex)
+  }
+} */
 
 function getXmlWidgets (filePath) {
   const xmlFileContents = getXMLContents(filePath)
@@ -144,4 +165,5 @@ module.exports = {
   writeNewThemeXML,
   writeNewEmbedXML,
   createStaticFileObjectPart,
+  // xml2jsAsync,
 }
