@@ -84,7 +84,7 @@ module.exports = class VerintTheme extends BaseGenerator {
           { name: 'Site', value: 'site' },
           { name: 'Group', value: 'group' },
           { name: 'Blog', value: 'blog' },
-          { name: 'Article', value: 'article' },
+          { name: 'Article Collection', value: 'article' },
         ],
       },
 
