@@ -40,9 +40,10 @@ function getThemeInfo (themeType, xmlFilePath) {
 
 module.exports = function getThemesProjectInfo () {
   const themeInfo = {
-    site:  [],
-    group: [],
-    blog:  [],
+    site:    [],
+    group:   [],
+    blog:    [],
+    article: [],
   }
 
   if (!fs.existsSync(PATH_THEME_DEFINITIONS)) return null
