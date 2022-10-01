@@ -395,7 +395,6 @@ module.exports = class VerintTheme extends BaseGenerator {
       ])
 
       this._copyFiles('build-scripts/gulp', 'build-scripts/gulp', ['main.js'])
-      this._copyFiles('build-scripts', 'build-scripts', ['getThemesProjectInfo.js'])
       // this._copyFiles('verint', 'verint', ['README.md'])
 
       this._copyFiles('../../../src', 'build-scripts', [
@@ -407,5 +406,9 @@ module.exports = class VerintTheme extends BaseGenerator {
         'readWidgetToBundle.js',
       ])
     }
+
+    // this file was changed compared to the previous scaffolder version, so we need to
+    // overwirte it on "add-xml" scenario too
+    this._copyFiles('build-scripts', 'build-scripts', ['getThemesProjectInfo.js'])
   }
 }
