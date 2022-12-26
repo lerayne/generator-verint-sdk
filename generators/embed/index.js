@@ -12,7 +12,7 @@ const { getXmlEmbeddable, createStaticFileObjectPart, writeNewEmbedXML } = requi
 const { getLastModified, widgetSafeName } = require('../../src/utils')
 const { ifCreatePath } = require('../../src/filesystem')
 const { PATH_EMBEDDABLES } = require('../../src/constants/paths')
-const { writeAttachments, writeStatics } = require('../../src/filesystem-generator')
+const { writeAttachments, writeStatics, writeImage } = require('../../src/filesystem-generator')
 const { embedStaticFiles } = require('../../src/constants/global')
 
 module.exports = class VerintEmbeddable extends BaseGenerator {
@@ -354,7 +354,8 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
     // create "clean" XML w/o attachments for Verint's FS
     const embedXmlObjectInternal = {}
     Object.keys(embedXmlObject).forEach(recordName => {
-      if (recordName !== 'files') {
+
+      if (!['files', 'previewImage', 'iconImage'].includes(recordName)) {
         embedXmlObjectInternal[recordName] = embedXmlObject[recordName]
       }
     })
@@ -366,6 +367,9 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
     const attachmentsPath = ifCreatePath(providerPath, _attributes.id)
 
     writeAttachments(embedXmlObject, 'files', attachmentsPath)
+
+    writeImage(embedXmlObject, 'previewImage', 'preview', attachmentsPath)
+    writeImage(embedXmlObject, 'iconImage', 'icon', attachmentsPath)
 
     const staticsPath = ifCreatePath(this.destinationPath(), path.join('src', 'statics'))
 

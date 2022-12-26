@@ -45,6 +45,19 @@ function writeAttachments (xmlObject, fieldName, destinationPath, destinationSub
   }
 }
 
+function writeImage (xmlObject, imageName, folderName, destinationPath) {
+  if (xmlObject[imageName]) {
+    const image = xmlObject[imageName]
+    if (image._cdata) {
+      const imagePath = ifCreatePath(destinationPath, folderName)
+      fs.writeFileSync(
+        path.join(imagePath, image._attributes.name),
+        base64ToBinary(image._cdata)
+      )
+    }
+  }
+}
+
 function writeStatics (xmlObject, staticsPath, staticFilesList = {}) {
   for (const [recordName, recordData] of Object.entries(xmlObject)) {
     if (Object.keys(staticFilesList).includes(recordName)) {
@@ -115,4 +128,5 @@ module.exports = {
   writeStatics,
   writeThemePreview,
   writePageLayouts,
+  writeImage,
 }
