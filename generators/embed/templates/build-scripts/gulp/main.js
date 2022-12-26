@@ -88,13 +88,41 @@ exports.buildInternalXml = function buildInternalXml () {
   }
 }
 
+function createImageRecord (imageFolder, imageType) {
+  const imagePath = path.join(imageFolder, imageType)
+
+  if (!fs.existsSync(imagePath)) return {}
+
+  const folderContents = fs.readdirSync(imagePath)
+
+  if (!folderContents.length) return {}
+
+  const files = folderContents
+    .filter(entry => !fs.lstatSync(path.join(imagePath, entry)).isDirectory())
+
+  if (!files.length) return {}
+
+  // take first (assuming there's only one)
+  const [imageFile] = files
+
+  return {
+    [`${imageType}Image`]: {
+      _attributes: { name: imageFile },
+      _cdata:      binaryToBase64(fs.readFileSync(path.join(imagePath, imageFile))),
+    },
+  }
+}
+
 function readEmbedToBundle (embedXmlObject, attachmentsPath) {
   // read current xml
   let embedFiles = []
 
   // collect files base64 data for new XML
   if (fs.existsSync(attachmentsPath)) {
-    const filesList = fs.readdirSync(attachmentsPath)
+    const attachmentsContents = fs.readdirSync(attachmentsPath)
+
+    const filesList = attachmentsContents
+      .filter(entry => !fs.lstatSync(path.join(attachmentsPath, entry)).isDirectory())
 
     if (filesList.length) {
       embedFiles = filesList.map(fileName => {
@@ -121,6 +149,8 @@ function readEmbedToBundle (embedXmlObject, attachmentsPath) {
     _attributes: { ...embedXmlObject._attributes, lastModified: getLastModified() },
     ...staticFiles,
     files:       embedFiles.length ? { file: embedFiles } : null,
+    ...createImageRecord(attachmentsPath, 'preview'),
+    ...createImageRecord(attachmentsPath, 'icon'),
   }
 
   /* if (embedXmlObject.requiredContext) {
