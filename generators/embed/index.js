@@ -9,7 +9,7 @@ const BaseGenerator = require('../../src/BaseGenerator')
 const validateProjectName = require('../../src/validators/validateProjectName')
 const validateEmail = require('../../src/validators/validateEmail')
 const { getXmlEmbeddable, createStaticFileObjectPart, writeNewEmbedXML } = require('../../src/xml')
-const { getLastModified, widgetSafeName } = require('../../src/utils')
+const { getLastModified, widgetSafeName, binaryToBase64 } = require('../../src/utils')
 const { ifCreatePath } = require('../../src/filesystem')
 const { PATH_EMBEDDABLES } = require('../../src/constants/paths')
 const { writeAttachments, writeStatics, writeImage } = require('../../src/filesystem-generator')
@@ -219,6 +219,13 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
         id:           uuidv4().replace(/-/gu, ''),
         lastModified: getLastModified(),
       }
+
+      embedXmlObject.previewImage = {
+        _attributes: { name: 'icon.svg' },
+        _cdata:      binaryToBase64(fs.readFileSync(this.templatePath('icon.svg'))),
+      }
+
+      embedXmlObject.iconImage = { ...embedXmlObject.previewImage }
 
       // if "configureNow" - overwrite small features with input values. Otherwise - leave values
       // from sample XML file
