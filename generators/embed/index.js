@@ -9,10 +9,10 @@ const BaseGenerator = require('../../src/BaseGenerator')
 const validateProjectName = require('../../src/validators/validateProjectName')
 const validateEmail = require('../../src/validators/validateEmail')
 const { getXmlEmbeddable, createStaticFileObjectPart, writeNewEmbedXML } = require('../../src/xml')
-const { getLastModified, widgetSafeName } = require('../../src/utils')
+const { getLastModified, widgetSafeName, binaryToBase64 } = require('../../src/utils')
 const { ifCreatePath } = require('../../src/filesystem')
 const { PATH_EMBEDDABLES } = require('../../src/constants/paths')
-const { writeAttachments, writeStatics } = require('../../src/filesystem-generator')
+const { writeAttachments, writeStatics, writeImage } = require('../../src/filesystem-generator')
 const { embedStaticFiles } = require('../../src/constants/global')
 
 module.exports = class VerintEmbeddable extends BaseGenerator {
@@ -220,6 +220,13 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
         lastModified: getLastModified(),
       }
 
+      embedXmlObject.previewImage = {
+        _attributes: { name: 'icon.svg' },
+        _cdata:      binaryToBase64(fs.readFileSync(this.templatePath('icon.svg'))),
+      }
+
+      embedXmlObject.iconImage = { ...embedXmlObject.previewImage }
+
       // if "configureNow" - overwrite small features with input values. Otherwise - leave values
       // from sample XML file
       if (configureNow) {
@@ -354,7 +361,8 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
     // create "clean" XML w/o attachments for Verint's FS
     const embedXmlObjectInternal = {}
     Object.keys(embedXmlObject).forEach(recordName => {
-      if (recordName !== 'files') {
+
+      if (!['files', 'previewImage', 'iconImage'].includes(recordName)) {
         embedXmlObjectInternal[recordName] = embedXmlObject[recordName]
       }
     })
@@ -366,6 +374,9 @@ module.exports = class VerintEmbeddable extends BaseGenerator {
     const attachmentsPath = ifCreatePath(providerPath, _attributes.id)
 
     writeAttachments(embedXmlObject, 'files', attachmentsPath)
+
+    writeImage(embedXmlObject, 'previewImage', 'preview', attachmentsPath)
+    writeImage(embedXmlObject, 'iconImage', 'icon', attachmentsPath)
 
     const staticsPath = ifCreatePath(this.destinationPath(), path.join('src', 'statics'))
 
