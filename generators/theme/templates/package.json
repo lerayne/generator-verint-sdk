@@ -19,11 +19,11 @@
     "scaffolded"
   ],
   "devDependencies": {
-    "eslint-config-anrom": "0.3.0",
+    "@anrom/eslint-config": "1.0.1",
     "gulp": "4.0.2",
     "inquirer": "8.2.2",
     "js-yaml": "4.1.0",
-    "moment": "2.29.1",
+    "moment": "2.29.4",
     "xml-js": "1.6.11"
   }
 }
