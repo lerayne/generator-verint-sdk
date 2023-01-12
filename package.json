@@ -38,6 +38,6 @@
     "npm": ">=6.14.16"
   },
   "devDependencies": {
-    "eslint-config-anrom": "0.4.0"
+    "@anrom/eslint-config": "1.0.1"
   }
 }
