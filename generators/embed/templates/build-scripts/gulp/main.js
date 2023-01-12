@@ -32,6 +32,10 @@ function writeEmbedInternalXML (
     },
   }
 
+  if (currentEmbedXml.supportedContentTypes) {
+    newWidgetXmlObject.supportedContentTypes = currentEmbedXml.supportedContentTypes
+  }
+
   const staticsFileList = fs.readdirSync(staticsPath)
 
   for (const fileName of staticsFileList) {
@@ -151,6 +155,10 @@ function readEmbedToBundle (embedXmlObject, attachmentsPath) {
     files:       embedFiles.length ? { file: embedFiles } : null,
     ...createImageRecord(attachmentsPath, 'preview'),
     ...createImageRecord(attachmentsPath, 'icon'),
+  }
+
+  if (embedXmlObject.supportedContentTypes) {
+    newXMLObject.supportedContentTypes = embedXmlObject.supportedContentTypes
   }
 
   /* if (embedXmlObject.requiredContext) {
